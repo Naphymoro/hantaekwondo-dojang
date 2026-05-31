@@ -602,6 +602,13 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
 .parent-profile-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px;margin-bottom:12px}
 .profile-line{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}.profile-line span:first-child{color:var(--dim)}.profile-line span:last-child{color:var(--fg);font-weight:700;text-align:right}
 .inactivity-warning{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:var(--card);border:1px solid rgba(255,184,0,.45);color:var(--fg);border-radius:12px;padding:11px 16px;box-shadow:0 12px 30px var(--shadow);z-index:5000;display:none;font-size:13px;max-width:calc(100vw - 30px)}
+
+.tb-logout{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,30,60,.28);background:rgba(255,30,60,.08);color:var(--crimson);border-radius:9px;padding:7px 10px;font-size:11.5px;font-weight:800;cursor:pointer;transition:all .15s}
+.tb-logout:hover{background:rgba(255,30,60,.14);transform:translateY(-1px)}.tb-logout svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.portal-outer.full-page{max-width:none;width:100%}.portal-outer.full-page .portal-phone{width:100%;max-width:none;border-radius:0;box-shadow:none;border-left:0;border-right:0}.portal-actions{display:grid;grid-template-columns:1fr;gap:9px;margin-top:12px}.portal-action-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--fg);font-weight:800;text-align:left;cursor:pointer}.portal-action-row.primary{background:var(--cg);border-color:rgba(255,30,60,.25);color:var(--white)}
+.child-meta-line{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.6}.child-meta-line strong{color:var(--fg)}.momo-form{display:grid;gap:8px;margin-top:8px}.momo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pending-pay-card{padding:10px;border-radius:10px;background:rgba(255,184,0,.08);border:1px solid rgba(255,184,0,.24);font-size:12px;color:var(--muted);margin-top:8px}.pay-actions{display:flex;gap:6px;flex-wrap:wrap}.pay-actions .sh-btn{font-size:10.5px;padding:5px 8px}
+@media(max-width:640px){.tb-logout span{display:none}.tb-logout{padding:8px}.portal-outer.full-page .portal-phone{border-radius:0}.momo-grid{grid-template-columns:1fr}}
+
 .inactivity-warning.show{display:block}.wallet-balance{font-family:'Rajdhani';font-size:24px;font-weight:800;color:var(--teal)}
 @media(max-width:640px){.roster-grid,.market-grid,.event-grid,.wallet-grid{grid-template-columns:1fr}.portal-phone{border-radius:18px}.portal-body{padding:12px}.profile-line{font-size:11.5px}}
 
@@ -736,6 +743,7 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
         <svg id="ti-light" style="display:none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       </button>
       <button class="tb-icon" id="notif-bell-btn" onclick="openNotifPanel()" title="Notifications"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notif-badge" id="notif-badge" style="display:none"></span></button>
+      <button class="tb-logout" onclick="logoutRole()" title="Logout"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>Logout</span></button>
       <div class="avatar-btn">A</div>
     </div>
   </header>
@@ -853,6 +861,8 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
         <div class="pt pt-red"><div class="pt-val" id="pay-out">RWF 0</div><div class="pt-lbl">Outstanding</div></div>
         <div class="pt pt-gold"><div class="pt-val" id="pay-exp">RWF 0</div><div class="pt-lbl">Total expected</div></div>
       </div>
+      <div class="sh admin-only" style="margin-top:14px"><span class="sh-title">Pending MoMo Payments</span></div>
+      <div class="tbl-wrap admin-only"><table><thead><tr><th>Student</th><th>Method</th><th>Phone</th><th>Purpose</th><th>Amount</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="momo-pending-body"></tbody></table></div>
       <div class="tbl-wrap"><table><thead><tr><th>Student</th><th>Period</th><th>Plan</th><th>Amount (RWF)</th><th>Method</th><th>Date</th><th>Status</th></tr></thead><tbody id="payments-body"></tbody></table></div>
     </div>
 
@@ -866,7 +876,7 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
         </span>
         <span id="portal-parent-locked" style="display:none;font-size:13px;color:var(--muted);font-weight:500"></span>
       </div>
-      <div class="portal-outer"><div class="portal-phone" id="portal-phone">
+      <div class="portal-outer full-page"><div class="portal-phone" id="portal-phone">
         <div class="portal-notch"></div>
         <div style="padding:32px;text-align:center;color:var(--dim);font-size:12.5px">Select a student above to view their portal</div>
       </div></div>
@@ -1353,6 +1363,7 @@ function applyRole(role, instrName) {
 
 function applyUIRestrictions(role) {
   const isAdminLevel = role === 'admin' || role === 'manager';
+  const allowed = ROLE_NAV[role] || [];
   // Hide admin-only action buttons for non-admins
   const adminOnlyBtns = document.querySelectorAll('.sh-btn.primary, .qa-btn.accent, .qa-btn');
   adminOnlyBtns.forEach(btn => {
@@ -2570,6 +2581,90 @@ confirmParentLogin=function(){const sel=document.getElementById('auth-student-se
 let inactivityWarnT=null,inactivityLogoutT=null;
 function resetInactivityTimer(){clearTimeout(inactivityWarnT);clearTimeout(inactivityLogoutT);document.getElementById('inactivity-warning')?.classList.remove('show'); if(!currentRole)return; inactivityWarnT=setTimeout(()=>{document.getElementById('inactivity-warning')?.classList.add('show');},180000); inactivityLogoutT=setTimeout(()=>{showToast('Logged out for inactivity','gold'); logoutRole();},210000);}
 ['click','keydown','touchstart','scroll','mousemove'].forEach(ev=>window.addEventListener(ev,resetInactivityTimer,{passive:true}));
+
+
+// ════════════════════════════════════════════
+// LOGOUT + PARENT UX + MOMO REFINEMENT PATCH
+// ════════════════════════════════════════════
+APP.getPendingPayments = function(){ return ld('ht_pending_momo', []); };
+APP.setPendingPayments = function(v){ sv('ht_pending_momo', v); };
+function childSessionLine(st){
+  const sessions=(studentSessionIds(st)||[]).map(id=>APP.sessions.find(s=>s.id===id)).filter(Boolean);
+  return sessions.length ? sessions.map(sessionLabel).join(', ') : 'No session assigned';
+}
+function renderTopLogout(){
+  const b=document.querySelector('.tb-logout'); if(!b)return;
+  b.style.display=currentRole?'inline-flex':'none';
+  const av=document.querySelector('.avatar-btn'); if(av) av.textContent=(currentRole||'A').slice(0,1).toUpperCase();
+}
+const __applyRoleLogoutPatch = applyRole;
+applyRole=function(role,instrName){ __applyRoleLogoutPatch(role,instrName); renderTopLogout(); };
+const __logoutRoleCore = logoutRole;
+logoutRole=function(){
+  localStorage.removeItem('ht_session');
+  sv('ht_current_role',null); sv('ht_parent_student',null);
+  parentStudentId=null; currentRole=null;
+  clearTimeout(inactivityWarnT); clearTimeout(inactivityLogoutT);
+  document.getElementById('inactivity-warning')?.classList.remove('show');
+  document.body.removeAttribute('data-role');
+  renderTopLogout();
+  _oldShowAuthScreen ? _oldShowAuthScreen() : showAuthScreen();
+};
+
+function createMomoPending(studentId, method, phone, amount, purpose){
+  const st=APP.students.find(x=>x.id===studentId); if(!st){showToast('Select a student first','err');return;}
+  if(!method || !phone || !Number(amount)){showToast('MoMo method, phone and amount are required','err');return;}
+  const items=APP.getPendingPayments();
+  items.push({id:'MOMO-'+Date.now(),studentId,parentId:st.parentId||'',method,phone,amount:Number(amount),purpose,status:'pending',date:tds(),ts:Date.now()});
+  APP.setPendingPayments(items); showToast('MoMo payment submitted for confirmation','gold'); renderPortal(); renderPayments();
+}
+function submitMomoForStudent(studentId){
+  const method=document.getElementById('momo-method')?.value||'MTN MoMo';
+  const phone=document.getElementById('momo-phone')?.value.trim()||'';
+  const amount=document.getElementById('momo-amount')?.value||0;
+  const purpose=document.getElementById('momo-purpose')?.value||'tuition';
+  createMomoPending(studentId,method,phone,amount,purpose);
+}
+function confirmMomo(id, ok){
+  const items=APP.getPendingPayments(); const it=items.find(x=>x.id===id); if(!it)return;
+  it.status=ok?'confirmed':'rejected'; it.reviewedBy=currentRole||'staff'; it.reviewedAt=Date.now();
+  if(ok){ const pays=APP.payments; pays.push({id:'p'+Date.now(),studentId:it.studentId,period:mLabel(),plan:APP.students.find(s=>s.id===it.studentId)?.plan||1,amount:it.amount,method:it.method,date:tds(),status:'paid',momoId:it.id}); APP.payments=pays; }
+  APP.setPendingPayments(items); renderPayments(); renderPortal(); showToast(ok?'MoMo payment confirmed':'MoMo payment rejected',ok?'ok':'err');
+}
+
+const __renderPaymentsPatch = renderPayments;
+renderPayments=function(){
+  __renderPaymentsPatch();
+  const body=document.getElementById('momo-pending-body'); if(!body)return;
+  const rows=APP.getPendingPayments().slice().reverse();
+  body.innerHTML=rows.length?rows.map(p=>{const st=APP.students.find(s=>s.id===p.studentId);return `<tr><td class="nm">${st?.name||'—'}</td><td>${p.method}</td><td class="mono">${p.phone}</td><td>${p.purpose}</td><td class="mono">${Number(p.amount).toLocaleString()}</td><td class="mono">${p.date}</td><td><span class="pill ${p.status==='confirmed'?'p-green':p.status==='rejected'?'p-red':'p-gold'}">${p.status}</span></td><td>${p.status==='pending'?`<div class="pay-actions"><button class="sh-btn primary" onclick="confirmMomo('${p.id}',true)">Confirm</button><button class="sh-btn" onclick="confirmMomo('${p.id}',false)">Reject</button></div>`:'—'}</td></tr>`}).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--dim);padding:14px">No pending MoMo payments</td></tr>';
+};
+
+renderStudents=function(){
+  const b=document.getElementById('students-body'); if(!b)return;
+  const students=currentRole==='instructor'?getInstructorStudents():APP.students;
+  const fees=[0,APP.lessonFee*4,APP.lessonFee*8,APP.lessonFee*12];
+  b.innerHTML=students.map(s=>{const cnt=APP.attendance.filter(a=>a.studentId===s.id&&a.date.startsWith(mths())).length;const req=(s.plan||1)*4;const pct=req?Math.round(cnt/req*100):0;const ps=paymentState(s);return `<tr><td class="nm">${s.name}</td><td>${s.age} yrs<br><span style="font-size:10.5px;color:var(--muted)">${childSessionLine(s)}</span></td><td><span class="belt ${BC[s.belt]||'b-white'}"><span class="belt-sw"></span>${s.belt}</span></td><td>${s.plan}/week</td><td>${childSessionLine(s)}</td><td class="mono">${(fees[s.plan]||0).toLocaleString()}</td><td>${cnt}/${req} · ${pct}%</td><td><span class="pill ${ps.status==='paid'?'p-green':ps.status==='wallet-funded'?'p-teal':'p-red'}">${ps.status}</span></td><td><button class="sh-btn" onclick="openEditStudent('${s.id}')">Edit</button> <button class="sh-btn primary" onclick="switchView('parent');document.getElementById('portal-sel').value='${s.id}';renderPortal()">Full profile</button></td></tr>`}).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--dim);padding:14px">No students</td></tr>';
+};
+
+renderPortal=function(){
+  const sel=document.getElementById('portal-sel'); if(!sel)return;
+  const id=parentStudentId||sel.value; const st=APP.students.find(x=>x.id===id);
+  if(!st){document.getElementById('portal-phone').innerHTML='<div style="padding:32px;text-align:center;color:var(--dim);font-size:12.5px">Select a student above to view their portal</div>';return;}
+  if(!st.parentId){ st.parentId=ensureParentForStudent(st); APP.students=APP.students.map(x=>x.id===st.id?st:x); }
+  const ps=paymentState(st), sessions=(studentSessionIds(st)||[]).map(sid=>APP.sessions.find(s=>s.id===sid)).filter(Boolean), att=APP.attendance.filter(a=>a.studentId===st.id), mAtt=att.filter(a=>a.date.startsWith(mths())), pct=Math.min(100,Math.round((mAtt.length/Math.max(1,(st.plan||1)*4))*100)), nextPromo=mAtt.length>=12?'Eligible now':'After '+Math.max(0,12-mAtt.length)+' more sessions', events=APP.events.filter(e=>(e.students||[]).includes(st.id)), orders=APP.orders.filter(o=>o.studentId===st.id), pending=APP.getPendingPayments().filter(p=>p.studentId===st.id).slice(-3).reverse();
+  document.getElementById('portal-phone').innerHTML=`<div class="portal-hero"><div class="portal-hero-glow"></div><div class="avatar-xl" style="margin:0 auto 10px">${initials(st.name)}</div><div class="portal-name">${st.name}</div><div class="portal-cls"><span class="belt ${BC[st.belt]||'b-white'}" style="display:inline-flex"><span class="belt-sw"></span>${st.belt}</span> · Age ${st.age} · Sessions: ${childSessionLine(st)}</div><button class="tb-logout" style="margin:12px auto 0" onclick="logoutRole()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>Logout</span></button></div><div class="portal-body"><div class="portal-actions"><button class="portal-action-row primary" onclick="document.getElementById('full-profile-${st.id}').scrollIntoView({behavior:'smooth'})"><span>View Full Profile</span><span>→</span></button><button class="portal-action-row" onclick="document.getElementById('payments-${st.id}').scrollIntoView({behavior:'smooth'})"><span>Payments / MoMo / Wallet</span><span>→</span></button></div><div class="parent-profile-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><div class="pb-lbl">Dojo Wallet</div><div class="wallet-balance">RWF ${walletBalance(st.parentId||'').toLocaleString()}</div><div class="child-meta-line"><strong>Age:</strong> ${st.age} yrs • <strong>Sessions:</strong> ${childSessionLine(st)}</div></div><div style="display:flex;gap:6px;align-items:center"><input class="form-input" id="wallet-topup-${st.id}" type="number" placeholder="Amount" style="width:105px;padding:8px"><button class="sh-btn primary" onclick="walletTxn('${st.parentId||''}','credit',document.getElementById('wallet-topup-${st.id}').value||0,'top-up','${st.id}','Parent top-up')">Top up</button></div></div></div>${ps.status==='paid'?'<div class="portal-alert portal-teal-alert"><div class="portal-alert-text"><strong>Tuition paid</strong> — current package is active.</div></div>':`<div class="portal-alert"><div class="portal-alert-text"><strong>Payment due</strong> — RWF ${ps.fee.toLocaleString()} for ${mLabel()}. ${ps.bal>0?'Wallet funds available.':'Use MoMo, Airtel Money or Wallet.'}</div></div>`}<div class="p-stats"><div class="p-stat"><div class="p-stat-val" style="color:var(--teal)">${mAtt.length}</div><div class="p-stat-lbl">Sessions this month</div></div><div class="p-stat"><div class="p-stat-val" style="color:var(--gold)">${pct}%</div><div class="p-stat-lbl">Attendance rate</div></div></div><div class="parent-profile-card" id="full-profile-${st.id}"><div class="pb-lbl">Full Student Profile</div><div class="profile-line"><span>Parent ID</span><span>${st.parentId||'Auto-generated'}</span></div><div class="profile-line"><span>Guardian</span><span>${ps.parent?.name||st.parentName||'—'}</span></div><div class="profile-line"><span>Age / Sessions</span><span>${st.age} yrs · ${childSessionLine(st)}</span></div><div class="profile-line"><span>Subscription</span><span>${st.subscriptionPackage||((st.plan||1)+' lesson/week package')}</span></div><div class="profile-line"><span>Payment</span><span>${ps.status}</span></div><div class="profile-line"><span>Umuganda notice</span><span>${st.ugandaNotice||'Pending acknowledgement'}</span></div><div class="profile-line"><span>Progress</span><span>${pct>=80?'Strong progress':'In progress'}</span></div><div class="profile-line"><span>Promotion date</span><span>${nextPromo}</span></div></div><div class="portal-block" id="payments-${st.id}"><div class="pb-lbl">MoMo Payment Options</div><div class="momo-form"><div class="momo-grid"><select class="form-input" id="momo-method"><option>MTN MoMo</option><option>Airtel Money</option><option>Dojo Wallet</option></select><input class="form-input" id="momo-phone" placeholder="MoMo phone number" value="${ps.parent?.phone||st.parentPhone||''}"></div><div class="momo-grid"><input class="form-input" id="momo-amount" type="number" placeholder="Amount" value="${ps.fee||''}"><select class="form-input" id="momo-purpose"><option value="tuition">Tuition</option><option value="wallet-top-up">Wallet top-up</option><option value="marketplace">Marketplace order</option><option value="event">Event / grading</option></select></div><button class="portal-pay" onclick="submitMomoForStudent('${st.id}')">Submit MoMo Payment for Confirmation</button><button class="portal-action-row" onclick="walletTxn('${st.parentId||''}','debit',${ps.fee},'tuition','${st.id}','Monthly tuition payment')"><span>Pay Tuition From Dojo Wallet</span><span>→</span></button></div>${pending.map(p=>`<div class="pending-pay-card"><strong>${p.method}</strong> · RWF ${Number(p.amount).toLocaleString()} · ${p.purpose} · <span class="pill ${p.status==='pending'?'p-gold':p.status==='confirmed'?'p-green':'p-red'}">${p.status}</span></div>`).join('')}</div><div class="portal-block"><div class="pb-lbl">Recent Attendance</div>${att.slice(-5).reverse().map(a=>`<div class="profile-line"><span>${a.date}</span><span>${a.status||'present'}</span></div>`).join('')||'<div class="smart-note">No attendance yet.</div>'}</div><div class="portal-block"><div class="pb-lbl">Events</div>${events.map(e=>`<div class="profile-line"><span>${e.date}</span><span>${e.title}</span></div>`).join('')||'<div class="smart-note">No upcoming events.</div>'}</div><div class="portal-block"><div class="pb-lbl">Marketplace Orders</div>${orders.map(o=>`<div class="profile-line"><span>${o.item}</span><span>${o.status}</span></div>`).join('')||'<div class="smart-note">No merchandise orders yet.</div>'}</div></div>`;
+};
+
+const __openScheduleRosterPatch = openScheduleRoster;
+openScheduleRoster=function(sessId){
+  __openScheduleRosterPatch(sessId);
+  const d=document.getElementById('schedule-roster-drawer'); if(!d)return;
+  d.innerHTML=d.innerHTML.replace(/(\d+ yrs · [^<]+)/g, (m)=>{ const nm=(m.match(/>([^<]+)<\/div><div style="font-size:11px/)||[])[1]; return m; });
+  APP.students.forEach(st=>{d.innerHTML=d.innerHTML.replace(`${st.age} yrs · ${st.belt}`, `${st.age} yrs · ${childSessionLine(st)} · ${st.belt}`);});
+};
+
+renderTopLogout();
 
 
 // INIT
