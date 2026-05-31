@@ -1,0 +1,601 @@
+}
+
+// ════════════════════════════════════════════
+// SESSION MODAL
+// ════════════════════════════════════════════
+let editSID=null,mI=[],mSt=[];
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function openNewSession(){editSID=null;mI=[document.getElementById('s-master')?.value||'Master Han'];mSt=[];document.getElementById('modalTitle').textContent='New Session';document.getElementById('m-type').value='kid';document.getElementById('m-day').value='Monday';document.getElementById('m-start').value='17:00';document.getElementById('m-end').value='17:55';document.getElementById('m-notes').value='';document.getElementById('btn-del-sess').style.display='none';renderMTags();openModal('sessionModal')}
+function openNewSessDay(d){openNewSession();document.getElementById('m-day').value=d}
+function openEditSess(id){
+  const s=APP.sessions.find(x=>x.id===id);if(!s)return;
+  editSID=id;mI=[...s.instructors];mSt=[...s.students];
+  document.getElementById('modalTitle').textContent=`${TM[s.type].label} — ${s.day}`;
+  document.getElementById('m-type').value=s.type;document.getElementById('m-day').value=s.day;
+  document.getElementById('m-start').value=s.start;document.getElementById('m-end').value=s.end;
+  document.getElementById('m-notes').value=s.notes||'';
+  document.getElementById('btn-del-sess').style.display='inline-flex';
+  renderMTags();openModal('sessionModal');
+}
+function renderMTags(){
+  document.getElementById('instructor-tags').innerHTML=mI.map((n,i)=>`\u003cspan class="tag">${n}\u003cspan class="tag-remove" onclick="removeTag('i',${i})">\u003csvg viewBox="0 0 24 24">\u003cpath d="M18 6 6 18M6 6l12 12"/>\u003c/svg>\u003c/span>\u003c/span>`).join('');
+  document.getElementById('student-tags').innerHTML=mSt.map((n,i)=>`\u003cspan class="tag">${n}\u003cspan class="tag-remove" onclick="removeTag('s',${i})">\u003csvg viewBox="0 0 24 24">\u003cpath d="M18 6 6 18M6 6l12 12"/>\u003c/svg>\u003c/span>\u003c/span>`).join('');
+}
+function addTag(type){const id=type==='instructor'?'instructor-input':'student-input';const inp=document.getElementById(id);const v=inp.value.trim();if(!v)return;if(type==='instructor'){if(!mI.includes(v))mI.push(v);}else{if(!mSt.includes(v))mSt.push(v);}inp.value='';renderMTags()}
+function removeTag(t,i){t==='i'?mI.splice(i,1):mSt.splice(i,1);renderMTags()}
+['instructor-input','student-input'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTag(id==='instructor-input'?'instructor':'student')}}));
+function saveSession(){
+  const sessions=APP.sessions;
+  const d={type:document.getElementById('m-type').value,day:document.getElementById('m-day').value,start:document.getElementById('m-start').value,end:document.getElementById('m-end').value,instructors:[...mI],students:[...mSt],notes:document.getElementById('m-notes').value};
+  if(editSID){const i=sessions.findIndex(x=>x.id===editSID);if(i>=0)sessions[i]={...sessions[i],...d};}else{d.id='s'+Date.now();sessions.push(d);}
+  APP.sessions=sessions;closeModal('sessionModal');renderSchedule();renderDashboard();showToast(editSID?'Session updated':'Session added');
+}
+function deleteSession(){APP.sessions=APP.sessions.filter(x=>x.id!==editSID);closeModal('sessionModal');renderSchedule();renderDashboard();showToast('Session deleted','err')}
+
+// ════════════════════════════════════════════
+// ATTENDANCE
+// ════════════════════════════════════════════
+function switchCITab(name,el){document.querySelectorAll('.checkin-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.checkin-panel').forEach(p=>p.classList.remove('active'));el.classList.add('active');document.getElementById('panel-'+name).classList.add('active')}
+function getInstructorSessions(){
+  // Returns sessions assigned to the logged-in instructor
+  if(currentRole !== 'instructor') return APP.sessions;
+  const instrName = ld('ht_current_instructor','');
+  if(!instrName) return APP.sessions;
+  return APP.sessions.filter(s => s.instructors && s.instructors.includes(instrName));
+}
+function getInstructorStudents(){
+  // Returns students enrolled in instructor's sessions
+  if(currentRole !== 'instructor') return APP.students;
+  const mySessions = getInstructorSessions();
+  const enrolled = new Set();
+  mySessions.forEach(s => (s.students||[]).forEach(name => enrolled.add(name)));
+  // Match by name to id
+  return APP.students.filter(st => enrolled.has(st.name));
+}
+function sessionLabel(sess){return sess?`${TM[sess.type]?.label||sess.type} — ${sess.day} ${sess.start}`:'—'}
+function studentSessionIds(st){return Array.isArray(st?.sessions)?st.sessions:[]}
+function isStudentScheduled(st,sess){return !!(st&&sess&&(studentSessionIds(st).includes(sess.id)||(sess.students||[]).includes(st.name)))}
+function syncStudentSessionAssignments(st){
+  const sessions=APP.sessions;
+  sessions.forEach(sess=>{
+    sess.students=Array.isArray(sess.students)?sess.students:[];
+    sess.students=sess.students.filter(n=>n!==st.name);
+    if(studentSessionIds(st).includes(sess.id)) sess.students.push(st.name);
+  });
+  APP.sessions=sessions;
+}
+function refreshAttendanceSearch(){const q=document.getElementById('att-search-inp')?.value||'';searchAtt(q)}
+function renderAttView(){
+  const sessions = currentRole==='instructor' ? getInstructorSessions() : APP.sessions;
+  const sel=document.getElementById('att-sess-sel');
+  const current=sel.value;
+  sel.innerHTML='<option value="">— Select session —</option>'+sessions.map(s=>`<option value="${s.id}">${sessionLabel(s)}</option>`).join('');
+  if(current) sel.value=current;
+  const today=new Date().toLocaleDateString('en-US',{weekday:'long'});
+  const att=APP.attendance;
+  document.getElementById('att-today').innerHTML=sessions.filter(s=>s.day===today).map(s=>{
+    const cnt=att.filter(a=>a.sessionId===s.id&&a.date===tds()&&(a.status||'present')!=='absent').length;
+    const makeup=att.filter(a=>a.sessionId===s.id&&a.date===tds()&&a.status==='make-up').length;
+    return`<div class="att-sess-row"><div><div class="att-sess-name">${TM[s.type].label}</div><div class="att-sess-meta">${s.day} ${s.start}–${s.end}${makeup?` · ${makeup} make-up`:''}</div></div><div class="att-sess-count">${cnt} present</div></div>`;
+  }).join('')||'<div style="color:var(--muted);font-size:12.5px;padding:10px 0">No sessions scheduled for today</div>';
+  refreshAttendanceSearch();
+}
+function searchAtt(q){
+  const res=document.getElementById('att-results');
+  if(!res)return;
+  if(q.length<3){res.innerHTML='<div style="color:var(--dim);font-size:11.5px;padding:5px 0">Type at least 3 characters…</div>';return;}
+  const studentPool = getInstructorStudents();
+  const att=APP.attendance,sessId=document.getElementById('att-sess-sel').value;
+  const sess=APP.sessions.find(x=>x.id===sessId);
+  const matches=studentPool.filter(s=>s.name.toLowerCase().includes(q.toLowerCase()));
+  if(!matches.length){res.innerHTML='<div style="color:var(--muted);font-size:12.5px;padding:5px 0">No students found</div>';return;}
+  res.innerHTML=matches.map(s=>{
+    const isM=att.some(a=>a.studentId===s.id&&a.date===tds()&&(!sessId||a.sessionId===sessId));
+    const scheduled=sess?isStudentScheduled(s,sess):false;
+    const status=sess?(scheduled?'<span class="schedule-hint schedule-ok">scheduled</span>':'<span class="schedule-hint schedule-miss">not scheduled</span>'):'<span class="schedule-hint schedule-miss">select session</span>';
+    const makePanel=(!isM&&sess&&!scheduled)?`<div class="makeup-panel" id="mk-${s.id}"><strong>This child is not scheduled for this session.</strong><br>Is this a make-up class?<div class="makeup-actions"><button class="save-btn" style="padding:7px 11px" onclick="markAtt('${s.id}','make-up')">Yes, mark make-up</button><button class="btn-cancel" onclick="showToast('Attendance not saved','gold')">No, do not save</button></div></div>`:'';
+    return`<div class="att-item ${isM?'marked':''}"><div style="flex:1;min-width:0"><div class="att-item-name">${s.name}</div><div class="att-item-meta"><span class="belt ${BC[s.belt]||'b-white'}"><span class="belt-sw"></span>${s.belt}</span> · Age ${s.age} · ${status}</div>${makePanel}</div><button class="mark-btn ${isM?'present':''}" onclick="markAtt('${s.id}','present')" ${isM||!sessId||(!scheduled&&sess)?'disabled':''}>${isM?'✓ Recorded':(!sessId?'Select session':scheduled?'Mark present':'Use make-up')}</button></div>`;
+  }).join('');
+}
+function markAtt(sid,status='present'){
+  const sessId=document.getElementById('att-sess-sel').value;
+  if(!sessId){showToast('Select a session first','err');return;}
+  const st=APP.students.find(x=>x.id===sid),sess=APP.sessions.find(x=>x.id===sessId);
+  const scheduled=isStudentScheduled(st,sess);
+  if(!scheduled && status!=='make-up'){showToast('This child is not scheduled. Use make-up confirmation.','gold');searchAtt(document.getElementById('att-search-inp').value);return;}
+  const att=APP.attendance;
+  const dup=att.some(a=>a.studentId===sid&&a.date===tds()&&a.sessionId===sessId);
+  if(dup){showToast('Attendance already recorded for this session today','gold');return;}
+  att.push({id:'a'+Date.now(),studentId:sid,studentName:st?.name||'',sessionId:sessId,sessionName:sessionLabel(sess),date:tds(),status:status==='make-up'?'make-up':'present',scheduledMatch:scheduled,recordedBy:currentRole,ts:Date.now()});
+  APP.attendance=att;
+  const q=document.getElementById('att-search-inp').value;
+  searchAtt(q);renderAttView();renderDashboard();renderStudents();
+  showToast(`${st?.name||'Student'} marked ${status==='make-up'?'make-up':'present'} ✓`);
+}
+function startQR(){document.getElementById('qr-zone').innerHTML='<div style="text-align:center;padding:14px;color:var(--muted);font-size:12.5px"><strong style="color:var(--fg);display:block;margin-bottom:5px">QR Scanner Active</strong>Camera QR scanning works on HTTPS deployments.<br>Deploy to GitHub Pages to enable live camera check-in.</div>';showToast('QR scanner ready on HTTPS','gold')}
+
+// ════════════════════════════════════════════
+// STUDENTS
+// ════════════════════════════════════════════
+let editStudentId=null;
+function renderSessionChecks(selected=[]){
+  const box=document.getElementById('sf-sessions');if(!box)return;
+  const selectedSet=new Set(selected||[]);
+  box.innerHTML=APP.sessions.map(sess=>`<label class="session-check"><input type="checkbox" value="${sess.id}" ${selectedSet.has(sess.id)?'checked':''}><span>${sessionLabel(sess)}</span></label>`).join('');
+}
+function openStudentForm(st=null){
+  editStudentId=st?.id||null;
+  document.getElementById('student-form-title').textContent=st?'Edit Student / Assign Sessions':'Add Student';
+  document.getElementById('sf-belt').innerHTML=BELT_OPTS.map(b=>`<option value="${b}">${b}</option>`).join('');
+  document.getElementById('sf-name').value=st?.name||'';
+  document.getElementById('sf-age').value=st?.age||'';
+  document.getElementById('sf-belt').value=st?.belt||'White';
+  document.getElementById('sf-plan').value=st?.plan||2;
+  document.getElementById('sf-pin').value=st?.parentPin||'0000';
+  renderSessionChecks(studentSessionIds(st));
+  document.getElementById('student-smart-form').classList.add('show');
+  document.getElementById('student-smart-form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeStudentForm(){document.getElementById('student-smart-form')?.classList.remove('show');editStudentId=null}
+function openAddStudent(){openStudentForm(null)}
+function editStudent(id){const st=APP.students.find(s=>s.id===id);if(st)openStudentForm(st)}
+function assignStudentSessions(id){editStudent(id)}
+function saveStudentSmart(){
+  const name=document.getElementById('sf-name').value.trim();
+  if(!name){showToast('Student name is required','err');return;}
+  const checked=[...document.querySelectorAll('#sf-sessions input:checked')].map(x=>x.value);
+  const age=parseInt(document.getElementById('sf-age').value||'10');
+  const belt=document.getElementById('sf-belt').value;
+  const plan=Math.min(3,Math.max(1,parseInt(document.getElementById('sf-plan').value||'2')));
+  const pin=(document.getElementById('sf-pin').value||'0000').slice(-4)||'0000';
+  const students=APP.students;
+  const data={name,age,belt:BELT_OPTS.includes(belt)?belt:'White',plan,parentPin:pin,sessions:checked};
+  let saved;
+  if(editStudentId){
+    const idx=students.findIndex(s=>s.id===editStudentId);if(idx<0)return;
+    saved={...students[idx],...data};students[idx]=saved;
+  }else{saved={id:'st'+Date.now(),...data};students.push(saved);}
+  APP.students=students;
+  syncStudentSessionAssignments(saved);
+  renderStudents();renderPortalList();renderDashboard();renderSchedule();renderAttView();closeStudentForm();
+  showToast(editStudentId?'Student updated':'Student enrolled');
+}
+function renderStudents(){
+  const students=APP.students,att=APP.attendance,fees=[0,APP.lessonFee*4,APP.lessonFee*8,APP.lessonFee*12],plans=['—','1x/wk','2x/wk','3x/wk'];
+  document.getElementById('nb-stud').textContent=students.length;
+  document.getElementById('students-body').innerHTML=students.map(s=>{
+    const cnt=att.filter(a=>a.studentId===s.id&&a.date.startsWith(mths())&&(a.status||'present')!=='absent').length;
+    const req=s.plan*4;const pct=req>0?Math.round(cnt/req*100):0;
+    const assigned=studentSessionIds(s).map(id=>APP.sessions.find(x=>x.id===id)).filter(Boolean);
+    const assignedText=assigned.length?assigned.slice(0,2).map(sessionLabel).join('<br>')+(assigned.length>2?`<br><span style="color:var(--dim)">+${assigned.length-2} more</span>`:''):'<span style="color:var(--dim)">No sessions</span>';
+    return`<tr><td class="nm">${s.name}</td><td>${s.age}</td><td><span class="belt ${BC[s.belt]||'b-white'}"><span class="belt-sw"></span>${s.belt}</span></td><td><span class="pill ${s.plan===1?'p-teal':s.plan===2?'p-blue':'p-gold'}">${plans[s.plan]}</span></td><td style="min-width:170px">${assignedText}</td><td class="mono">RWF ${(fees[s.plan]||0).toLocaleString()}</td><td><div style="display:flex;align-items:center;gap:6px"><span class="mono">${cnt}/${req}</span><div class="pbar" style="width:55px"><div class="pbar-fill ${pct>=80?'pf-teal':pct>=50?'pf-gold':'pf-red'}" style="width:${pct}%"></div></div></div></td><td><span class="pill p-green">Active</span></td><td><div style="display:flex;gap:5px;flex-wrap:wrap"><button class="sh-btn" style="padding:3px 8px;font-size:11px" onclick="editStudent('${s.id}')">Edit</button><button class="sh-btn primary" style="padding:3px 8px;font-size:11px" onclick="assignStudentSessions('${s.id}')">Assign Session</button></div></td></tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════
+// INSTRUCTORS
+// ════════════════════════════════════════════
+let editIID=null,iSessTags=[];
+function renderInstructors(){
+  const instrs=APP.instructors,ia=APP.instrAtt;
+  document.getElementById('nb-instr').textContent=instrs.length;
+  document.getElementById('instructor-grid').innerHTML=instrs.map(instr=>{
+    const mCnt=ia.filter(a=>a.iid===instr.id&&a.date.startsWith(mths())).length;
+    const tot=ia.filter(a=>a.iid===instr.id).length;
+    const init=instr.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+    return`\u003cdiv class="ic">\u003cdiv class="ic-header">\u003cdiv class="ic-av">${init}\u003c/div>\u003cdiv>\u003cdiv class="ic-name">${instr.name}\u003c/div>\u003cdiv class="ic-role">${instr.role}\u003c/div>\u003c/div>\u003c/div>\u003cdiv class="ic-stats">\u003cdiv class="ic-stat">\u003cdiv class="ic-stat-val">${mCnt}\u003c/div>\u003cdiv class="ic-stat-lbl">This month\u003c/div>\u003c/div>\u003cdiv class="ic-stat">\u003cdiv class="ic-stat-val">${tot}\u003c/div>\u003cdiv class="ic-stat-lbl">Total sessions\u003c/div>\u003c/div>\u003c/div>\u003cdiv style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px">\u003cspan class="belt ${BC[instr.belt]||'b-black'}">\u003cspan class="belt-sw">\u003c/span>${instr.belt}\u003c/span>\u003cspan class="pill p-green">Active\u003c/span>\u003c/div>${instr.sessions?.length?`\u003cdiv class="ic-sess-list">${instr.sessions.slice(0,3).map(s=>`\u003cdiv class="ic-sess-tag">${s}\u003c/div>`).join('')}${instr.sessions.length>3?`\u003cdiv style="font-size:9.5px;color:var(--dim);padding:2px 0">+${instr.sessions.length-3} more\u003c/div>`:''}\u003c/div>`:''}\u003cdiv class="ic-actions">\u003cbutton class="sh-btn" style="padding:4px 10px;font-size:11px;flex:1" onclick="openEditInstr('${instr.id}')">Edit\u003c/button>\u003cbutton class="sh-btn primary" style="padding:4px 10px;font-size:11px" onclick="markInstrAtt('${instr.id}')">✓ Present\u003c/button>\u003c/div>\u003c/div>`;
+  }).join('')||'\u003cdiv style="color:var(--muted);font-size:12.5px;padding:8px 0">No instructors added yet\u003c/div>';
+  document.getElementById('instr-log-body').innerHTML=instrs.map(instr=>{
+    const ia2=ia.filter(a=>a.iid===instr.id);
+    const mCnt=ia2.filter(a=>a.date.startsWith(mths())).length;
+    const tot=ia2.length;const last=ia2.length?ia2.slice(-1)[0].date:'Never';
+    return`\u003ctr>\u003ctd class="nm">${instr.name}\u003c/td>\u003ctd>\u003cspan class="belt ${BC[instr.belt]||'b-black'}">\u003cspan class="belt-sw">\u003c/span>${instr.belt}\u003c/span>\u003c/td>\u003ctd>\u003cspan class="pill p-teal">${mCnt} sessions\u003c/span>\u003c/td>\u003ctd class="mono">${tot}\u003c/td>\u003ctd class="mono">${last}\u003c/td>\u003ctd style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${instr.sessions?.slice(0,2).join(', ')||'—'}${instr.sessions?.length>2?` +${instr.sessions.length-2}`:''}\u003c/td>\u003ctd>\u003cbutton class="sh-btn" style="padding:3px 8px;font-size:11px" onclick="openEditInstr('${instr.id}')">Edit\u003c/button>\u003c/td>\u003c/tr>`;
+  }).join('');
+}
+function markInstrAtt(id){
+  const ia=APP.instrAtt;
+  if(!ia.some(a=>a.iid===id&&a.date===tds())){ia.push({iid:id,date:tds(),ts:Date.now()});APP.instrAtt=ia;}
+  const instr=APP.instructors.find(x=>x.id===id);renderInstructors();showToast(`${instr?.name||'Instructor'} marked present ✓`);
+}
+function openAddInstructor(){editIID=null;iSessTags=[];document.getElementById('instrModalTitle').textContent='Add Instructor';['i-name','i-phone','i-email'].forEach(id=>document.getElementById(id).value='');document.getElementById('i-role').value='';document.getElementById('i-belt').value='Black 1st Dan';document.getElementById('btn-del-instr').style.display='none';renderITags();openModal('instrModal')}
+function openEditInstr(id){
+  const instr=APP.instructors.find(x=>x.id===id);if(!instr)return;
+  editIID=id;iSessTags=[...(instr.sessions||[])];
+  document.getElementById('instrModalTitle').textContent='Edit Instructor';
+  document.getElementById('i-name').value=instr.name;document.getElementById('i-role').value=instr.role;
+  document.getElementById('i-belt').value=instr.belt;document.getElementById('i-phone').value=instr.phone||'';
+  document.getElementById('i-email').value=instr.email||'';
+  document.getElementById('btn-del-instr').style.display='inline-flex';
+  renderITags();openModal('instrModal');
+}
+function renderITags(){document.getElementById('i-sess-tags').innerHTML=iSessTags.map((s,i)=>`\u003cspan class="tag">${s}\u003cspan class="tag-remove" onclick="iSessTags.splice(${i},1);renderITags()">\u003csvg viewBox="0 0 24 24">\u003cpath d="M18 6 6 18M6 6l12 12"/>\u003c/svg>\u003c/span>\u003c/span>`).join('')}
+function addInstrTag(){const inp=document.getElementById('i-sess-input'),v=inp.value.trim();if(!v)return;if(!iSessTags.includes(v))iSessTags.push(v);inp.value='';renderITags()}
+document.getElementById('i-sess-input')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addInstrTag()}});
+function saveInstructor(){
+  const instrs=APP.instructors;
+  const d={name:document.getElementById('i-name').value.trim(),role:document.getElementById('i-role').value.trim(),belt:document.getElementById('i-belt').value,phone:document.getElementById('i-phone').value.trim(),email:document.getElementById('i-email').value.trim(),sessions:[...iSessTags]};
+  if(!d.name){showToast('Name required','err');return;}
+  if(editIID){const i=instrs.findIndex(x=>x.id===editIID);if(i>=0)instrs[i]={...instrs[i],...d};}else{d.id='i'+Date.now();instrs.push(d);}
+  APP.instructors=instrs;closeModal('instrModal');renderInstructors();renderDashboard();showToast(editIID?'Instructor updated':'Instructor added');
+}
+function deleteInstructor(){APP.instructors=APP.instructors.filter(x=>x.id!==editIID);closeModal('instrModal');renderInstructors();renderDashboard();showToast('Instructor removed','err')}
+
+// ════════════════════════════════════════════
+// PAYMENTS
+// ════════════════════════════════════════════
+function renderPayments(){
+  const payments=APP.payments,students=APP.students,fees=[0,APP.lessonFee*4,APP.lessonFee*8,APP.lessonFee*12];
+  const exp=students.reduce((s,x)=>s+(fees[x.plan]||0),0);
+  const col=payments.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
+  document.getElementById('pay-col').textContent='RWF '+col.toLocaleString();
+  document.getElementById('pay-out').textContent='RWF '+Math.max(0,exp-col).toLocaleString();
+  document.getElementById('pay-exp').textContent='RWF '+exp.toLocaleString();
+  const plans=['—','1x/wk','2x/wk','3x/wk'];
+  document.getElementById('payments-body').innerHTML=payments.length?payments.slice().reverse().map(p=>{const s=students.find(x=>x.id===p.studentId);return`\u003ctr>\u003ctd class="nm">${s?.name||'—'}\u003c/td>\u003ctd>${p.period}\u003c/td>\u003ctd>\u003cspan class="pill p-blue">${plans[s?.plan||1]}\u003c/span>\u003c/td>\u003ctd class="mono">${p.amount.toLocaleString()}\u003c/td>\u003ctd>${p.method}\u003c/td>\u003ctd class="mono">${p.date}\u003c/td>\u003ctd>\u003cspan class="pill ${p.status==='paid'?'p-green':'p-red'}">${p.status}\u003c/span>\u003c/td>\u003c/tr>`}).join(''):'\u003ctr>\u003ctd colspan="7" style="text-align:center;color:var(--dim);padding:16px">No payments recorded yet\u003c/td>\u003c/tr>';
+}
+function openAddPayment(){
+  const students=APP.students;if(!students.length){showToast('Add students first','err');return;}
+  const names=students.map((s,i)=>`${i+1}. ${s.name}`).join('\n');
+  const idx=parseInt(prompt(`Select student:\n${names}\n\nEnter number:`))-1;if(isNaN(idx)||idx<0||idx>=students.length)return;
+  const s=students[idx];const fees=[0,APP.lessonFee*4,APP.lessonFee*8,APP.lessonFee*12];
+  const amount=parseInt(prompt('Amount (RWF):',fees[s.plan])||fees[s.plan]);
+  const method=prompt(`Method:\n${METHODS.join(' / ')}`,METHODS[0])||METHODS[0];
+  const period=prompt('Period:',mLabel())||mLabel();
+  const payments=APP.payments;payments.push({id:'p'+Date.now(),studentId:s.id,amount,method,period,date:tds(),status:'paid'});
+  APP.payments=payments;renderPayments();renderDashboard();showToast('Payment recorded ✓');
+}
+
+// ════════════════════════════════════════════
+// PARENT PORTAL
+// ════════════════════════════════════════════
+function renderPortalList(){
+  const sel=document.getElementById('portal-sel');
+  sel.innerHTML='\u003coption value="">Select student…\u003c/option>'+APP.students.map(s=>`\u003coption value="${s.id}">${s.name}\u003c/option>`).join('');
+}
+function renderPortal(){
+  const id=document.getElementById('portal-sel').value;if(!id)return;
+  const students=APP.students,s=students.find(x=>x.id===id);if(!s)return;
+  const att=APP.attendance,sessions=APP.sessions,payments=APP.payments;
+  const fees=[0,APP.lessonFee*4,APP.lessonFee*8,APP.lessonFee*12];
+  const mAtt=att.filter(a=>a.studentId===id&&a.date.startsWith(mths()));
+  const req=s.plan*4;const pct=Math.min(100,Math.round((mAtt.length/req)*100));
+  const init=s.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+  const payment=payments.filter(p=>p.studentId===id).slice(-1)[0];
+  const isPaid=payment&&payment.period===mLabel()&&payment.status==='paid';
+  const stuSess=sessions.filter(s2=>isStudentScheduled(s,s2)).slice(0,4);
+  const attHist=att.filter(a=>a.studentId===id).slice(-5).reverse();
+  const plans=['—','1x/week','2x/week','3x/week'];
+  // Portal alerts
+  let palerts='';
+  if(!isPaid)palerts+=`\u003cdiv class="portal-alert">\u003csvg viewBox="0 0 24 24">\u003ccircle cx="12" cy="12" r="10"/>\u003cpath d="M12 8v4M12 16h.01"/>\u003c/svg>\u003cdiv class="portal-alert-text">\u003cstrong>Payment due\u003c/strong> — ${mLabel()} fee of RWF ${(fees[s.plan]||0).toLocaleString()} is outstanding.\u003c/div>\u003c/div>`;
+  if(pct>=80&&s.belt!=='Black 2nd Dan')palerts+=`\u003cdiv class="portal-alert portal-teal-alert">\u003csvg viewBox="0 0 24 24">\u003ccircle cx="12" cy="12" r="10"/>\u003cpath d="M12 8v4M12 16h.01"/>\u003c/svg>\u003cdiv class="portal-alert-text">\u003cstrong>Belt grading eligible!\u003c/strong> ${s.name} has ${mAtt.length} sessions this month. Test can be scheduled.\u003c/div>\u003c/div>`;
+  document.getElementById('portal-phone').innerHTML=`
+    \u003cdiv class="portal-notch">\u003c/div>
+    \u003cdiv class="portal-hero">\u003cdiv class="portal-hero-glow">\u003c/div>
+      \u003cdiv class="portal-av">${init}\u003c/div>
+      \u003cdiv class="portal-name">${s.name}\u003c/div>
+      \u003cdiv class="portal-cls">\u003cspan class="belt ${BC[s.belt]||'b-white'}" style="display:inline-flex">\u003cspan class="belt-sw">\u003c/span>${s.belt}\u003c/span> · ${plans[s.plan]}\u003c/div>
+    \u003c/div>
+    \u003cdiv class="portal-body">
+      ${palerts}
+      \u003cdiv class="p-stats">
+        \u003cdiv class="p-stat">\u003cdiv class="p-stat-val" style="color:var(--teal)">${mAtt.length}\u003c/div>\u003cdiv class="p-stat-lbl">Sessions this month\u003c/div>\u003c/div>
+        \u003cdiv class="p-stat">\u003cdiv class="p-stat-val" style="color:var(--gold)">${pct}%\u003c/div>\u003cdiv class="p-stat-lbl">Attendance rate\u003c/div>\u003c/div>
+      \u003c/div>
+      \u003cdiv class="portal-block">
+        \u003cdiv class="pb-lbl">Monthly Progress\u003c/div>
+        \u003cdiv style="font-size:12px;color:var(--fg);margin-bottom:7px">${mAtt.length} of ${req} sessions attended\u003c/div>
+        \u003cdiv class="pbar">\u003cdiv class="pbar-fill ${pct>=80?'pf-teal':pct>=50?'pf-gold':'pf-red'}" style="width:${pct}%">\u003c/div>\u003c/div>
+        \u003cdiv style="display:flex;justify-content:space-between;margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim)">\u003cspan>0\u003c/span>\u003cspan>${req} required\u003c/span>\u003c/div>
+      \u003c/div>
+      ${stuSess.length?`\u003cdiv class="portal-block">\u003cdiv class="pb-lbl">Enrolled Sessions\u003c/div>${stuSess.map(s2=>`\u003cdiv style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">\u003cspan style="color:var(--fg);font-weight:600">${s2.day} · ${TM[s2.type].label}\u003c/span>\u003cspan style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:9.5px">${s2.start}–${s2.end}\u003c/span>\u003c/div>`).join('')}\u003c/div>`:''}
+      \u003cdiv class="portal-block">
+        \u003cdiv class="pb-lbl">Fee — ${mLabel()}\u003c/div>
+        \u003cdiv style="display:flex;align-items:center;justify-content:space-between">
+          \u003cdiv>\u003cdiv style="font-size:14px;font-weight:700;color:var(--fg);font-family:'Rajdhani',sans-serif">RWF ${(fees[s.plan]||0).toLocaleString()}\u003c/div>
+          ${payment?`\u003cdiv style="font-size:10.5px;color:var(--teal);margin-top:1px">✓ ${payment.date} · ${payment.method}\u003c/div>`:'\u003cdiv style="font-size:10.5px;color:var(--crimson);margin-top:1px">Not paid yet\u003c/div>'}\u003c/div>
+          \u003cspan class="pill ${isPaid?'p-green':'p-red'}">${isPaid?'Paid':'Overdue'}\u003c/span>
+        \u003c/div>
+      \u003c/div>
+      ${attHist.length?`\u003cdiv class="portal-block">\u003cdiv class="pb-lbl">Recent Attendance\u003c/div>${attHist.map(a=>{const sess=sessions.find(x=>x.id===a.sessionId);return`\u003cdiv style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:10.5px">\u003cspan style="font-family:'JetBrains Mono',monospace;color:var(--muted)">${a.date}\u003c/span>\u003cspan style="color:var(--muted)">${sess?TM[sess.type]?.label:'Session'}\u003c/span>\u003cspan style="color:var(--teal);font-weight:700">✓\u003c/span>\u003c/div>`;}).join('')}\u003c/div>`:''}
+      \u003cdiv class="portal-block parent-only" style="padding:0">
+        \u003cbutton onclick="openAbsenceModal('${s.id}')" style="width:100%;padding:11px 14px;border-radius:9px;background:rgba(255,184,0,.08);border:1px solid rgba(255,184,0,.2);color:var(--gold);font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px">
+          \u003csvg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\u003ccircle cx="12" cy="12" r="10"/>\u003cpath d="M12 8v4M12 16h.01"/>\u003c/svg>
+          Report Absence
+        \u003c/button>
+      \u003c/div>
+      \u003cbutton class="portal-pay" onclick="showToast('MTN MoMo payment link sent to parent','gold')">💳 Pay via MTN MoMo\u003c/button>
+    \u003c/div>`;
+}
+
+// ════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════
+function renderDashboard(){
+  const students=APP.students,sessions=APP.sessions,att=APP.attendance,instrs=APP.instructors;
+  const today=new Date().toLocaleDateString('en-US',{weekday:'long'});
+  const col=APP.payments.filter(p=>p.status==='paid').reduce((s,p)=>s+p.amount,0);
+  document.getElementById('mv-stud').textContent=students.length;
+  document.getElementById('d-stud').textContent=students.length+' enrolled';
+  document.getElementById('mv-instr').textContent=instrs.length;
+  document.getElementById('d-instr').textContent=instrs.length+' staff';
+  document.getElementById('mv-rev').textContent=(col/1000).toFixed(0)+'K';
+  document.getElementById('mv-att').textContent=att.filter(a=>a.date===tds()).length;
+  document.getElementById('live-count').textContent=sessions.filter(s=>s.day===today).length+' sessions';
+  document.getElementById('nb-sess').textContent=sessions.length;
+  document.getElementById('nb-stud').textContent=students.length;
+  document.getElementById('nb-instr').textContent=instrs.length;
+  const todaySess=sessions.filter(s=>s.day===today);
+  document.getElementById('today-sess-body').innerHTML=todaySess.length?todaySess.map(s=>`\u003ctr>\u003ctd class="nm">${TM[s.type].label}\u003c/td>\u003ctd class="mono">${s.start}–${s.end}\u003c/td>\u003ctd>\u003cspan class="pill ${TM[s.type].badge}">${s.type.toUpperCase()}\u003c/span>\u003c/td>\u003ctd>${s.instructors.join(', ')||'—'}\u003c/td>\u003ctd>${(s.students||[]).length}\u003c/td>\u003c/tr>`).join(''):'\u003ctr>\u003ctd colspan="5" style="text-align:center;color:var(--dim);padding:14px">No sessions today\u003c/td>\u003c/tr>';
+  const recent=att.slice(-6).reverse();
+  document.getElementById('recent-att-body').innerHTML=recent.length?recent.map(a=>{const st=students.find(x=>x.id===a.studentId),sess=sessions.find(x=>x.id===a.sessionId);const status=a.status||'present';return`\u003ctr>\u003ctd class="nm">${st?.name||a.studentName||'—'}\u003c/td>\u003ctd>\u003cspan class="belt ${BC[st?.belt]||'b-white'}">\u003cspan class="belt-sw">\u003c/span>${st?.belt||'—'}\u003c/span>\u003c/td>\u003ctd>${sess?TM[sess.type]?.label+' '+sess.start:(a.sessionName||'—')}\u003c/td>\u003ctd>\u003cspan class="pill ${status==='make-up'?'p-gold':'p-green'}">${status}\u003c/span>\u003c/td>\u003ctd class="mono">${a.date}\u003c/td>\u003c/tr>`;}).join(''):'\u003ctr>\u003ctd colspan="5" style="text-align:center;color:var(--dim);padding:14px">No check-ins yet\u003c/td>\u003c/tr>';
+  renderSmartAlerts();
+  // Umuganda dashboard notice
+  const dashNotice = document.getElementById('umuganda-notice-dash');
+  if(dashNotice){
+    if(isUmugandaWeek()){
+      const ls=nextUmugandaDate();
+      const dl=ls.toLocaleDateString('en-US',{weekday:'long',day:'numeric',month:'long'});
+      dashNotice.style.display='flex';
+      dashNotice.innerHTML=`\u003csvg viewBox="0 0 24 24">\u003cpath d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>\u003c/svg>\u003cdiv class="umuganda-notice-body">\u003cdiv class="umuganda-notice-title">RW Umuganda — ${dl}\u003c/div>\u003cstrong>Saturday schedule adjusted.\u003c/strong> Classes start from 11:15 AM. \u003cspan style="color:var(--dim);font-size:11px">Normal Sunday schedule resumes next week.\u003c/span>\u003c/div>`;
+    } else {
+      // Show next Umuganda date as a friendly reminder
+      const ls=nextUmugandaDate();
+      const dl=ls.toLocaleDateString('en-US',{weekday:'long',day:'numeric',month:'long'});
+      dashNotice.style.display='flex';
+      dashNotice.innerHTML=`\u003csvg viewBox="0 0 24 24">\u003cpath d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>\u003c/svg>\u003cdiv class="umuganda-notice-body">\u003cdiv class="umuganda-notice-title" style="color:var(--muted);font-size:12px;font-family:'Outfit',sans-serif;font-weight:500;letter-spacing:.3px">Next Umuganda Saturday — ${dl} · Schedule will be adjusted from 11:15 AM\u003c/div>\u003c/div>`;
+      dashNotice.style.background='rgba(0,0,0,.04)';
+      dashNotice.style.border='1px solid var(--border)';
+    }
+  }
+}
+
+// ════════════════════════════════════════════
+// PWA — Service Worker + Install + Offline
+// ════════════════════════════════════════════
+let deferredInstallPrompt = null;
+let swRegistration = null;
+
+function initPWA() {
+  // ── Register service worker ──
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js', { scope: '/han-taekwondo-dojang/' })
+      .then(reg => {
+        swRegistration = reg;
+        console.log('[PWA] Service worker registered:', reg.scope);
+
+        // Check for updates
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available
+              document.getElementById('update-bar').classList.add('show');
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[PWA] SW registration failed:', err));
+
+    // Listen for messages from SW
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data?.type === 'SYNC_NOW') {
+        if (typeof syncToSheets === 'function') syncToSheets();
+      }
+    });
+  }
+
+  // ── Install prompt (Android Chrome) ──
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    // Show install banner after 3 seconds if not dismissed before
+    if (!localStorage.getItem('pwa-dismissed')) {
+      setTimeout(() => document.getElementById('pwa-banner').classList.add('show'), 3000);
+    }
+  });
+
+  // ── Detect when installed ──
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('pwa-banner').classList.remove('show');
+    deferredInstallPrompt = null;
+    showToast('App installed successfully!');
+    localStorage.setItem('pwa-dismissed', 'true');
+  });
+
+  // ── Offline / Online detection ──
+  function updateOnlineStatus() {
+    const bar = document.getElementById('offline-bar');
+    if (!navigator.onLine) {
+      bar.classList.add('show');
+    } else {
+      bar.classList.remove('show');
+    }
+  }
+  window.addEventListener('online',  updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus(); // check immediately
+
+  // ── iOS install hint (Safari doesn't support beforeinstallprompt) ──
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandaloneMode = window.navigator.standalone;
+  if (isIOS && !isInStandaloneMode && !localStorage.getItem('pwa-dismissed')) {
+    setTimeout(() => {
+      const banner = document.getElementById('pwa-banner');
+      banner.querySelector('.pwa-banner-sub').textContent =
+        'Tap the Share button then "Add to Home Screen"';
+      banner.querySelector('#pwa-install-btn').style.display = 'none';
+      banner.classList.add('show');
+    }, 3000);
+  }
+
+  // ── Handle deep link shortcuts (?view=attendance etc) ──
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetView = urlParams.get('view');
+  if (targetView && ['dashboard','schedule','attendance','students','instructors','payments','parent','settings'].includes(targetView)) {
+    switchView(targetView);
+  }
+}
+
+function installPWA() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.then(choice => {
+    if (choice.outcome === 'accepted') {
+      showToast('Installing Han TKD app…');
+    }
+    deferredInstallPrompt = null;
+  });
+}
+
+function dismissPWABanner() {
+  document.getElementById('pwa-banner').classList.remove('show');
+  localStorage.setItem('pwa-dismissed', 'true');
+}
+
+function applyUpdate() {
+  if (swRegistration?.waiting) {
+    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }
+  window.location.reload();
+}
+
+document.getElementById('pwa-install-btn')?.addEventListener('click', installPWA);
+
+// ── Request notification permission ──
+function requestNotificationPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') showToast('Notifications enabled');
+    });
+  }
+}
+
+// ── Send local notification (works without push server) ──
+function sendLocalNotification(title, body, url) {
+  if (!swRegistration || Notification.permission !== 'granted') return;
+  swRegistration.showNotification(title, {
+    body,
+    icon: LOGO_URI,
+    badge: LOGO_URI,
+    vibrate: [200, 100, 200],
+    data: { url: url || '/han-taekwondo-dojang/' },
+    tag: 'han-tkd-' + Date.now(),
+  });
+}
+
+// ── Notify parents about due payments (called from renderDashboard) ──
+function triggerSmartNotifications() {
+  if (Notification.permission !== 'granted') return;
+  const students = APP.students, payments = APP.payments;
+  const fees = [0, APP.lessonFee*4, APP.lessonFee*8, APP.lessonFee*12];
+  students.forEach(s => {
+    const paid = payments.some(p => p.studentId === s.id && p.period === mLabel() && p.status === 'paid');
+    if (!paid) {
+      sendLocalNotification(
+        'Fee Reminder — ' + s.name,
+        s.name + ' has an outstanding fee for ' + mLabel() + '. RWF ' + (fees[s.plan]||0).toLocaleString(),
+        '/han-taekwondo-dojang/?view=payments'
+      );
+    }
+  });
+}
+
+
+// ════════════════════════════════════════════
+// AUTH — PIN LOGIN SYSTEM
+// ════════════════════════════════════════════
+// ABSENCE REPORTING
+// ════════════════════════════════════════════
+function openAbsenceModal(studentId){
+  const s = APP.students.find(x=>x.id===studentId);
+  if(!s) return;
+  document.getElementById('abs-student-name').value = s.name;
+  document.getElementById('abs-student-name').dataset.id = studentId;
+  // Populate sessions
+  const sel = document.getElementById('abs-session-sel');
+  sel.innerHTML = '\u003coption value="">Select session…\u003c/option>' +
+    APP.sessions.map(sess => '\u003coption value="'+sess.id+'">'+TM[sess.type].label+' — '+sess.day+' '+sess.start+'\u003c/option>').join('');
+  // Default date = today
+  document.getElementById('abs-date').value = tds();
+  document.getElementById('abs-note').value = '';
+  openModal('absenceModal');
+}
+
+function submitAbsence(){
+  const studentId = document.getElementById('abs-student-name').dataset.id;
+  const sessionId = document.getElementById('abs-session-sel').value;
+  const date      = document.getElementById('abs-date').value;
+  const note      = document.getElementById('abs-note').value.trim();
+  if(!studentId || !date){ showToast('Please fill all required fields','err'); return; }
+  const absences = APP.absences;
+  absences.push({
+    id: 'abs'+Date.now(), studentId, sessionId, date, note,
+    reportedAt: new Date().toISOString(), status: 'pending'
+  });
+  APP.absences = absences;
+  closeModal('absenceModal');
+  renderAbsences();
+  renderSmartAlerts();
+  showToast('Absence reported — dojo notified');
+}
+
+function renderAbsences(){
+  const el = document.getElementById('reported-absences-list');
+  if(!el) return;
+  const absences = APP.absences;
+  // Instructor sees only their sessions
+  const mySessionIds = currentRole==='instructor'
+    ? getInstructorSessions().map(s=>s.id)
+    : null;
+  const filtered = absences.filter(a =>
+    a.status === 'pending' &&
+    (mySessionIds === null || mySessionIds.includes(a.sessionId))
+  );
+  const badge = document.getElementById('abs-pending-badge');
+  if(badge){ badge.style.display = filtered.length ? 'inline-block' : 'none'; badge.textContent = filtered.length; }
+  if(!filtered.length){
+    el.innerHTML = '\u003cdiv style="color:var(--muted);font-size:12.5px;padding:8px 0">No pending absences\u003c/div>';
+    return;
+  }
+  el.innerHTML = filtered.map(a => {
+    const s    = APP.students.find(x=>x.id===a.studentId);
+    const sess = APP.sessions.find(x=>x.id===a.sessionId);
+    return '\u003cdiv style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 13px;background:var(--surface);border:1px solid rgba(255,184,0,.2);border-left:3px solid var(--gold);border-radius:9px">' +
+      '\u003cdiv>' +
+        '\u003cdiv style="font-size:13px;font-weight:600;color:var(--fg)">' + (s?s.name:'Unknown') + '\u003c/div>' +
+        '\u003cdiv style="font-size:11px;color:var(--muted);margin-top:2px">' +
+          (sess ? TM[sess.type].label+' — '+sess.day+' '+sess.start : 'Session') +
+          ' &nbsp;·&nbsp; ' + a.date +
+          (a.note ? ' &nbsp;·&nbsp; \u003cem>'+a.note+'\u003c/em>' : '') +
+        '\u003c/div>' +
+      '\u003c/div>' +
+      '\u003cbutton onclick="acknowledgeAbsence(\''+a.id+'\')" style="padding:5px 11px;border-radius:6px;background:var(--tg);color:var(--teal);border:1px solid rgba(0,212,172,.25);font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0">Acknowledge\u003c/button>' +
+    '\u003c/div>';
+  }).join('');
+}
+
+function acknowledgeAbsence(id){
+  const absences = APP.absences;
+  const idx = absences.findIndex(a=>a.id===id);
+  if(idx>=0){ absences[idx].status='acknowledged'; APP.absences=absences; }
+  renderAbsences();
+  showToast('Absence acknowledged');
+}
+
+// ════════════════════════════════════════════
+// KIOSK MODE
+// ════════════════════════════════════════════
+function enterKioskMode(){
+  hideAuthScreen();
+  const overlay = document.getElementById('kiosk-overlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  updateKioskSession();
+  setInterval(updateKioskSession, 60000);
+  setTimeout(()=>document.getElementById('kiosk-search')?.focus(), 300);
+}
+
+function exitKioskMode(){

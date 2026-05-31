@@ -1,0 +1,581 @@
+
+<script>
+// ── Logo URI (read from meta tag, avoids parser issues) ──
+const LOGO_URI = (function(){
+  const m = document.getElementById('app-logo-meta');
+  return m ? m.getAttribute('content') : '';
+})();
+// ════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════
+const DAYS=['Monday','Tuesday','Thursday','Friday','Saturday'];
+const TM={kid:{label:'Kid Lesson',cls:'slot-kid',badge:'p-gold'},ld:{label:'Little Dragon',cls:'slot-ld',badge:'p-purple'},ta:{label:'Teen & Adults',cls:'slot-ta',badge:'p-blue'},spar:{label:'Sparring ★',cls:'slot-spar',badge:'p-red'},women:{label:"Women's",cls:'slot-women',badge:'p-teal'}};
+const BC={'White':'b-white','Yellow':'b-yellow','Green':'b-green','Blue':'b-blue','Red':'b-red','Black 1st Dan':'b-black','Black 2nd Dan':'b-black','Black 3rd Dan':'b-black','Black 4th Dan':'b-black'};
+const BELT_OPTS=['White','Yellow','Green','Blue','Red','Black 1st Dan','Black 2nd Dan'];
+const METHODS=['MTN MoMo','Cash','Bank Transfer','Airtel Money'];
+const PM={dashboard:['DASHBOARD','Academy Overview'],schedule:['SCHEDULE','Weekly Timetable'],attendance:['ATTENDANCE','Check-In Engine'],students:['STUDENTS','Roster'],instructors:['INSTRUCTORS','Staff Management'],payments:['PAYMENTS','Fee Ledger'],parent:['PARENT PORTAL','Mobile View'],settings:['SETTINGS','Configuration']};
+
+// ════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════
+const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const tds=()=>new Date().toISOString().slice(0,10);
+const mths=()=>new Date().toISOString().slice(0,7);
+const mLabel=()=>new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+const APP={
+  lessonFee:150000,
+  get sessions(){return ld('ht_s',defS())},set sessions(v){sv('ht_s',v)},
+  get students(){return ld('ht_st',defSt())},set students(v){sv('ht_st',v)},
+  get instructors(){return ld('ht_i',defI())},set instructors(v){sv('ht_i',v)},
+  get attendance(){return ld('ht_a',[])},set attendance(v){sv('ht_a',v)},
+  get instrAtt(){return ld('ht_ia',[])},set instrAtt(v){sv('ht_ia',v)},
+  get payments(){return ld('ht_p',[])},set payments(v){sv('ht_p',v)},
+  get absences(){return ld('ht_absences',[])},set absences(v){sv('ht_absences',v)},
+};
+
+function defS(){return[
+  {id:'s1',type:'women',day:'Monday',start:'13:00',end:'14:00',instructors:['Master Han'],students:[],notes:'Women only'},
+  {id:'s2',type:'kid',day:'Monday',start:'17:00',end:'17:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s3',type:'ta',day:'Monday',start:'18:00',end:'18:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s4',type:'kid',day:'Tuesday',start:'16:00',end:'16:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s5',type:'ld',day:'Tuesday',start:'17:00',end:'17:40',instructors:['Master Han'],students:[],notes:''},
+  {id:'s6',type:'kid',day:'Tuesday',start:'18:00',end:'18:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s7',type:'spar',day:'Tuesday',start:'19:00',end:'19:55',instructors:['Master Han'],students:[],notes:'Blue belt+ only'},
+  {id:'s8',type:'kid',day:'Thursday',start:'17:00',end:'17:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s9',type:'ta',day:'Thursday',start:'18:00',end:'18:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s10',type:'spar',day:'Friday',start:'14:00',end:'14:55',instructors:['Master Han'],students:[],notes:'Blue belt+ only ★'},
+  {id:'s11',type:'ld',day:'Friday',start:'15:00',end:'15:40',instructors:['Master Han'],students:[],notes:''},
+  {id:'s12',type:'kid',day:'Friday',start:'16:00',end:'16:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s13',type:'ld',day:'Friday',start:'17:00',end:'17:40',instructors:['Master Han'],students:[],notes:''},
+  {id:'s14',type:'kid',day:'Friday',start:'18:00',end:'18:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s15',type:'spar',day:'Friday',start:'19:00',end:'19:55',instructors:['Master Han'],students:[],notes:'Blue belt+ only ★'},
+  {id:'s16',type:'kid',day:'Saturday',start:'09:00',end:'09:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s17',type:'ld',day:'Saturday',start:'10:00',end:'10:40',instructors:['Master Han'],students:[],notes:''},
+  {id:'s18',type:'kid',day:'Saturday',start:'11:00',end:'11:55',instructors:['Master Han'],students:[],notes:''},
+  {id:'s19',type:'ta',day:'Saturday',start:'12:00',end:'12:55',instructors:['Master Han'],students:[],notes:''},
+];}
+function defSt(){return[
+  {id:'st1',name:'Kim Min-jun',age:14,belt:'Red',plan:2},
+  {id:'st2',name:'Park Ji-young',age:16,belt:'Blue',plan:3},
+  {id:'st3',name:'Lee Soo-yeon',age:11,belt:'Green',plan:2},
+  {id:'st4',name:'Choi Do-hyun',age:9,belt:'Yellow',plan:2},
+  {id:'st5',name:'Yoon Jae-won',age:22,belt:'Black 1st Dan',plan:3},
+  {id:'st6',name:'Oh Hyun-seo',age:9,belt:'White',plan:1},
+  {id:'st7',name:'Jung Ha-na',age:13,belt:'Blue',plan:2},
+  {id:'st8',name:'Han Seung-ah',age:17,belt:'Red',plan:3,parentPin:'0000'},
+];
+// ensure existing students get parentPin default
+}
+function defI(){return[{id:'i1',name:'Master Han',role:'Head Instructor',belt:'Black 4th Dan',phone:'+250 788 000 001',email:'master@han-tkd.com',sessions:['Monday Kid 17:00','Monday Teen 18:00','Fri Sparring 14:00','Sat Kid 09:00']}];}
+
+// ════════════════════════════════════════════
+// THEME
+// ════════════════════════════════════════════
+function toggleTheme(){
+  const h=document.documentElement,dark=h.getAttribute('data-theme')==='dark';
+  h.setAttribute('data-theme',dark?'light':'dark');
+  document.getElementById('ti-dark').style.display=dark?'none':'block';
+  document.getElementById('ti-light').style.display=dark?'block':'none';
+  sv('ht_theme',dark?'light':'dark');
+}
+(()=>{const t=ld('ht_theme','dark');document.documentElement.setAttribute('data-theme',t);if(t==='light'){document.getElementById('ti-dark').style.display='none';document.getElementById('ti-light').style.display='block';}})();
+
+// ════════════════════════════════════════════
+// ROUTING
+// ════════════════════════════════════════════
+function switchView(v){
+  if(!PM[v])return;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+v)?.classList.add('active');
+  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  document.getElementById('tb-title').textContent=PM[v][0];
+  document.getElementById('tb-sub').textContent=PM[v][1];
+  closeSidebar();
+  ({schedule:renderSchedule,attendance:renderAttView,students:renderStudents,instructors:renderInstructors,payments:renderPayments,parent:renderPortalList,dashboard:renderDashboard})[v]?.();
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
+function toggleSidebar(){const s=document.getElementById('sidebar'),bd=document.getElementById('sidebarBackdrop');s.classList.toggle('open');bd.classList.toggle('show')}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('show')}
+// ════════════════════════════════════════════
+// ROLE-BASED ACCESS CONTROL
+// ════════════════════════════════════════════
+
+// Default PINs — admin should change in Settings
+const DEFAULT_PINS = { admin:'1234', manager:'9012', instructor:'5678' };
+function getPins(){ return ld('ht_pins', DEFAULT_PINS); }
+
+let currentRole = 'admin'; // active role
+let authTargetRole = null; // role being authenticated
+let pinBuffer = '';
+let parentStudentId = null;
+
+// ── NAV VISIBILITY PER ROLE ──────────────────
+const ROLE_NAV = {
+  admin:      ['dashboard','schedule','attendance','students','instructors','payments','parent','settings'],
+  manager:    ['dashboard','schedule','attendance','students','instructors','payments','parent','settings'],
+  instructor: ['dashboard','schedule','attendance','parent'],
+  parent:     ['schedule','parent'],
+};
+
+const ROLE_CHIP_CONFIG = {
+  admin:      { cls:'rc-admin',      icon:'\u003cpath d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',                                              label:'Admin' },
+  manager:    { cls:'rc-manager',    icon:'\u003cpath d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>\u003cpath d="M9 12l2 2 4-4"/>',             label:'Manager' },
+  instructor: { cls:'rc-instructor', icon:'\u003cpath d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>\u003ccircle cx="9" cy="7" r="4"/>',                  label:'Instructor' },
+  parent:     { cls:'rc-parent',     icon:'\u003crect x="5" y="2" width="14" height="20" rx="2"/>\u003cpath d="M10 18h4"/>',                                 label:'Parent' },
+};
+
+function applyRole(role, instrName) {
+  currentRole = role;
+  document.body.setAttribute('data-role', role);
+  if(role==='instructor' && instrName) sv('ht_current_instructor', instrName);
+
+  // Update role chip
+  const cfg = ROLE_CHIP_CONFIG[role];
+  const chip = document.getElementById('role-chip');
+  if(chip){
+    chip.className = 'role-chip ' + cfg.cls;
+    chip.querySelector('svg').innerHTML = cfg.icon;
+    document.getElementById('role-chip-label').textContent = cfg.label;
+  }
+
+  // Show/hide nav buttons
+  const allowed = ROLE_NAV[role] || [];
+  document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+    const view = btn.dataset.view;
+    btn.style.display = allowed.includes(view) ? '' : 'none';
+  });
+  document.querySelectorAll('.mob-btn[data-view]').forEach(btn => {
+    const view = btn.dataset.view;
+    btn.style.display = allowed.includes(view) ? '' : 'none';
+  });
+
+  // Show/hide portal selector vs locked label
+  const adminCtrl  = document.getElementById('portal-admin-controls');
+  const parentLock = document.getElementById('portal-parent-locked');
+  if(role === 'parent'){
+    if(adminCtrl)  adminCtrl.style.display  = 'none';
+    if(parentLock){
+      const s = APP.students.find(x=>x.id===parentStudentId);
+      parentLock.style.display = 'inline';
+      parentLock.textContent   = s ? s.name + String.fromCharCode(39) + 's Portal' : 'My Child';
+    }
+    if(parentStudentId){
+      switchView('parent');
+      setTimeout(()=>{
+        const sel = document.getElementById('portal-sel');
+        if(sel){ sel.value = parentStudentId; renderPortal(); }
+      }, 100);
+    } else { switchView('parent'); }
+  } else {
+    if(adminCtrl)  adminCtrl.style.display  = '';
+    if(parentLock) parentLock.style.display = 'none';
+    if(role === 'instructor') switchView('attendance');
+    else switchView('dashboard'); // admin and manager both land on dashboard
+  }
+
+  // Restrict add/edit buttons
+  applyUIRestrictions(role);
+
+  sv('ht_current_role', role);
+  sv('ht_parent_student', parentStudentId);
+}
+
+function applyUIRestrictions(role) {
+  const isAdminLevel = role === 'admin' || role === 'manager';
+  // Hide admin-only action buttons for non-admins
+  const adminOnlyBtns = document.querySelectorAll('.sh-btn.primary, .qa-btn.accent, .qa-btn');
+  adminOnlyBtns.forEach(btn => {
+    if(!isAdminLevel && !btn.classList.contains('keep-role')) {
+      btn.style.display = 'none';
+    } else {
+      btn.style.display = '';
+    }
+  });
+
+  // Sidebar footer quick actions — admin only
+  const footer = document.querySelector('.sidebar-footer');
+  if(footer) footer.style.display = role === 'admin' ? '' : 'none';
+
+  // Settings nav item — admin only
+  document.querySelectorAll('.nav-btn[data-view="settings"]').forEach(b => {
+    b.style.display = role === 'admin' ? '' : 'none';
+  });
+  // Payments nav item — admin only
+  document.querySelectorAll('.nav-btn[data-view="payments"]').forEach(b => {
+    b.style.display = role === 'admin' ? '' : 'none';
+  });
+  // Students nav — admin only
+  document.querySelectorAll('.nav-btn[data-view="students"]').forEach(b => {
+    b.style.display = role === 'admin' ? '' : 'none';
+  });
+  // Instructors nav — admin only
+  document.querySelectorAll('.nav-btn[data-view="instructors"]').forEach(b => {
+    b.style.display = role === 'admin' ? '' : 'none';
+  });
+}
+
+// ── AUTH SCREEN ──────────────────────────────
+function showAuthScreen() {
+  // Clear remember-me session when manually switching roles
+  localStorage.removeItem('ht_session');
+  sv('ht_current_role', null);
+  // Populate parent student list
+  const sel = document.getElementById('auth-student-sel');
+  if(sel){
+    sel.innerHTML = '\u003coption value="">Select your child…\u003c/option>' +
+      APP.students.map(s => '\u003coption value="' + s.id + '">' + s.name + '\u003c/option>').join('');
+  }
+  // Inject logo into auth screen
+  const logoImg = document.getElementById('auth-logo-img');
+  if(logoImg){
+    const mainLogo = document.querySelector('.brand-logo img');
+    if(mainLogo) logoImg.src = mainLogo.src;
+  }
+  document.getElementById('auth-overlay').style.display = 'flex';
+  showAuthStep('role');
+}
+
+function hideAuthScreen() {
+  document.getElementById('auth-overlay').style.display = 'none';
+}
+
+function showAuthStep(step) {
+  const map = {
+    role: document.getElementById('auth-role-step'),
+    pin: document.getElementById('auth-pin-step'),
+    parent: document.getElementById('auth-parent-step')
+  };
+  Object.entries(map).forEach(([name, el]) => {
+    if(el) el.style.display = name === step ? 'block' : 'none';
+  });
+  if(step === 'pin') resetPinUI();
+}
+
+function backToRoleSelect() {
+  authTargetRole = null;
+  pinBuffer = '';
+  document.querySelectorAll('.auth-role-btn').forEach(b => b.classList.remove('selected'));
+  showAuthStep('role');
+}
+
+function selectAuthRole(role) {
+  if(!role){ backToRoleSelect(); return; }
+  authTargetRole = role;
+  document.querySelectorAll('.auth-role-btn').forEach(b => b.classList.toggle('selected', b.dataset.role === role));
+
+  if(role === 'parent'){
+    showAuthStep('parent');
+  } else {
+    document.getElementById('auth-pin-label').textContent =
+      role === 'admin' ? 'Enter Admin PIN' : role === 'manager' ? 'Enter Manager PIN' : 'Enter Instructor PIN';
+    showAuthStep('pin');
+  }
+}
+
+// ── PIN PAD ──────────────────────────────────
+function resetPinUI() {
+  pinBuffer = '';
+  document.getElementById('auth-error').textContent = '';
+  for(let i=0;i<4;i++) {
+    const d = document.getElementById('pd' + i);
+    d.className = 'auth-pin-dot';
+  }
+}
+
+function pinInput(digit) {
+  if(pinBuffer.length>= 4) return;
+  pinBuffer += digit;
+  const d = document.getElementById('pd' + (pinBuffer.length - 1));
+  if(d) d.classList.add('filled');
+  if(pinBuffer.length === 4) setTimeout(pinSubmit, 150);
+}
+
+function pinBack() { pinDelete(); }
+function pinClear() { pinBuffer = ''; resetPinUI(); }
+
+function pinDelete() {
+  if(pinBuffer.length === 0) return;
+  const d = document.getElementById('pd' + (pinBuffer.length - 1));
+  if(d) d.classList.remove('filled');
+  pinBuffer = pinBuffer.slice(0, -1);
+}
+
+function pinSubmit() {
+  const pins = getPins();
+  const correct = pins[authTargetRole];
+  if(pinBuffer === correct) {
+    hideAuthScreen();
+    applyRole(authTargetRole);
+    showToast('Welcome, ' + ROLE_CHIP_CONFIG[authTargetRole].label);
+  } else {
+    // Wrong PIN — shake dots
+    document.getElementById('auth-error').textContent = 'Incorrect PIN — try again';
+    for(let i=0;i<4;i++) {
+      const d = document.getElementById('pd' + i);
+      d.classList.add('error');
+    }
+    setTimeout(() => {
+      resetPinUI();
+    }, 800);
+  }
+}
+
+// ── PARENT LOGIN ─────────────────────────────
+function parentLogin() {
+  const sel = document.getElementById('auth-student-sel');
+  const val = sel?.value;
+  if(!val){
+    document.getElementById('auth-parent-err').textContent = 'Please select a student';
+    return;
+  }
+  parentStudentId = val;
+  hideAuthScreen();
+  applyRole('parent');
+  const student = APP.students.find(s => s.id === val);
+  showToast('Welcome, ' + (student?.name || 'Parent'));
+}
+
+// ── PROMPT ROLE SWITCH (from chip in topbar) ──
+function promptRoleSwitch() {
+  showAuthScreen();
+}
+
+// ── LOGOUT / SWITCH ROLE ────────────────────
+function logoutRole() {
+  // Clear saved session so auth screen shows on next load
+  sv('ht_current_role', null);
+  sv('ht_parent_student', null);
+  parentStudentId = null;
+  currentRole = null;
+  // Reset body role
+  document.body.removeAttribute('data-role');
+  showAuthScreen();
+}
+
+// ── CHANGE PINS (called from settings) ───────
+function changePin(role) {
+  const pin = prompt('Enter new ' + role + ' PIN (4 digits):');
+  if(!pin || !/^\d{4}$/.test(pin)) {
+    showToast('PIN must be exactly 4 digits', 'err');
+    return;
+  }
+  const pins = getPins();
+  pins[role] = pin;
+  sv('ht_pins', pins);
+  showToast(ROLE_CHIP_CONFIG[role].label + ' PIN updated');
+}
+
+// ════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════
+let toastT;
+function showToast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  t.className='toast'+(type==='err'?' t-err':type==='gold'?' t-gold':'');
+  void t.offsetWidth;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ════════════════════════════════════════════
+// SMART ALERTS
+// ════════════════════════════════════════════
+function buildAlerts(){
+  const alerts=[],students=APP.students,payments=APP.payments,att=APP.attendance;
+  const fees=[0,APP.lessonFee*4,APP.lessonFee*8,APP.lessonFee*12];
+  students.forEach(s=>{
+    const paid=payments.some(p=>p.studentId===s.id&&p.period===mLabel()&&p.status==='paid');
+    if(!paid)alerts.push({cls:'ni-red',msg:`\u003cstrong>Fee overdue — ${s.name}\u003c/strong> has not paid for ${mLabel()}.`});
+  });
+  students.forEach(s=>{
+    const cnt=att.filter(a=>a.studentId===s.id&&a.date.startsWith(mths())).length;
+    if(cnt>=12&&s.belt!=='Black 2nd Dan')alerts.push({cls:'ni-gold',msg:`\u003cstrong>Grading eligible — ${s.name}\u003c/strong> has ${cnt} sessions this month. Belt test can be scheduled.`});
+  });
+  students.forEach(s=>{
+    const cnt=att.filter(a=>a.studentId===s.id&&a.date.startsWith(mths())).length;
+    const req=s.plan*4;const pct=req>0?Math.round(cnt/req*100):0;
+    if(cnt>0&&pct<50)alerts.push({cls:'ni-blue',msg:`\u003cstrong>Low attendance — ${s.name}\u003c/strong> is at ${pct}% this month (${cnt}/${req} sessions).`});
+  });
+  // Pending absence reports
+  const pendingAbs = APP.absences.filter(a=>a.status==='pending');
+  if(pendingAbs.length){
+    alerts.push({cls:'ni-gold', msg: '\u003cstrong>'+pendingAbs.length+' absence report'+(pendingAbs.length>1?'s':'')+' pending\u003c/strong> — review in Attendance tab.'});
+  }
+  // Umuganda week reminder in notifications
+  if(isUmugandaWeek()){
+    const dl=nextUmugandaDate().toLocaleDateString('en-US',{weekday:'long',day:'numeric',month:'long'});
+    alerts.unshift({cls:'ni-gold',msg:`\u003cstrong>Umuganda Saturday — ${dl}\u003c/strong> · Adjusted schedule: 11:15 LD · 12:00 Kids · 13:00 Teen & Adults.`});
+  }
+  return alerts.slice(0,6);
+}
+// dismissed notification IDs stored in session
+let dismissedNotifs = new Set();
+
+function renderSmartAlerts(){
+  const alerts = buildAlerts().filter((_,i) => !dismissedNotifs.has(i));
+  // Update bell badge
+  const badge = document.getElementById('notif-badge');
+  if(badge){ badge.style.display = alerts.length ? 'flex' : 'none'; badge.textContent = alerts.length> 9 ? '9+' : alerts.length; }
+}
+
+function openNotifPanel(){
+  const alerts = buildAlerts().filter((_,i) => !dismissedNotifs.has(i));
+  const list = document.getElementById('notif-list');
+  const badge = document.getElementById('notif-count-badge');
+  if(badge){ badge.textContent = alerts.length; badge.style.display = alerts.length ? 'inline-flex' : 'none'; }
+  const iconMap = { 'ni-red': '\u003ccircle cx="12" cy="12" r="10"/>\u003cpath d="M12 8v4M12 16h.01"/>',  'ni-gold': '\u003cpath d="M10.3 3.1 2.1 18a2 2 0 0 0 1.8 2.9h16.2a2 2 0 0 0 1.8-2.9L13.7 3.1a2 2 0 0 0-3.4 0z"/>\u003cpath d="M12 9v4M12 17h.01"/>', 'ni-blue': '\u003ccircle cx="12" cy="12" r="10"/>\u003cpath d="M12 16v-4M12 8h.01"/>', 'ni-teal': '\u003cpath d="M20 6 9 17l-5-5"/>' };
+  if(!alerts.length){
+    list.innerHTML = `\u003cdiv class="notif-empty">\u003csvg viewBox="0 0 24 24">\u003cpath d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>\u003cpath d="M13.7 21a2 2 0 0 1-3.4 0"/>\u003c/svg>\u003cdiv class="notif-empty-text">All clear — no notifications\u003c/div>\u003c/div>`;
+  } else {
+    list.innerHTML = alerts.map((a,i)=>`\u003cdiv class="notif-item ${a.cls}" id="ni${i}">
+      \u003cdiv class="ni-icon">\u003csvg viewBox="0 0 24 24">${iconMap[a.cls]||iconMap['ni-blue']}\u003c/svg>\u003c/div>
+      \u003cdiv class="ni-content">\u003cdiv class="ni-title">${a.cls==='ni-red'?'Fee Overdue':a.cls==='ni-gold'?'Belt Grading Eligible':'Low Attendance'}\u003c/div>\u003cdiv class="ni-body">${a.msg}\u003c/div>\u003c/div>
+      \u003cspan class="ni-dismiss" onclick="dismissNotif(${i})" title="Dismiss">×\u003c/span>
+    \u003c/div>`).join('');
+  }
+  document.getElementById('notifPanel').classList.add('open');
+  document.getElementById('notifOverlay').classList.add('show');
+}
+
+function closeNotifPanel(){
+  document.getElementById('notifPanel').classList.remove('open');
+  document.getElementById('notifOverlay').classList.remove('show');
+}
+
+function dismissNotif(i){
+  dismissedNotifs.add(i);
+  const el=document.getElementById('ni'+i);
+  if(el){el.style.opacity='0';el.style.transform='translateX(20px)';el.style.transition='all .2s';setTimeout(()=>openNotifPanel(),220);}
+  renderSmartAlerts();
+}
+
+function clearAllNotifs(){
+  const alerts=buildAlerts();alerts.forEach((_,i)=>dismissedNotifs.add(i));
+  openNotifPanel();renderSmartAlerts();
+  showToast('All notifications cleared');
+}
+
+// ════════════════════════════════════════════
+// SCHEDULE
+// ════════════════════════════════════════════
+// ════════════════════════════════════════════
+// UMUGANDA — Last Saturday of every month
+// ════════════════════════════════════════════
+function getLastSaturday(year, month) {
+  // month is 0-indexed JS month
+  const d = new Date(year, month + 1, 0); // last day of month
+  while (d.getDay() !== 6) d.setDate(d.getDate() - 1);
+  return d;
+}
+
+function isUmugandaWeek() {
+  const now = new Date();
+  const ls = getLastSaturday(now.getFullYear(), now.getMonth());
+  // Show Umuganda notice from Wednesday before through Saturday itself
+  const wed = new Date(ls); wed.setDate(ls.getDate() - 3);
+  return now>= wed && now <= ls;
+}
+
+function isUmugandaSaturday(dateStr) {
+  // dateStr = 'YYYY-MM-DD' or a Date object
+  const d = dateStr instanceof Date ? dateStr : new Date(dateStr + 'T12:00:00');
+  if (d.getDay() !== 6) return false;
+  const ls = getLastSaturday(d.getFullYear(), d.getMonth());
+  return d.getDate() === ls.getDate();
+}
+
+function nextUmugandaDate() {
+  const now = new Date();
+  const ls = getLastSaturday(now.getFullYear(), now.getMonth());
+  if (now> ls) {
+    // already passed this month, get next month
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return getLastSaturday(next.getFullYear(), next.getMonth());
+  }
+  return ls;
+}
+
+function umugandaDateLabel() {
+  const d = nextUmugandaDate();
+  return d.toLocaleDateString('en-US', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+}
+
+// Umuganda Saturday replacement sessions
+const UMUGANDA_SESSIONS = [
+  {id:'ug1', type:'ld',  day:'Saturday', start:'11:15', end:'11:55', instructors:['Master Han'], students:[], notes:'Umuganda Saturday — Little Dragons adjusted class'},
+  {id:'ug2', type:'kid', day:'Saturday', start:'12:00', end:'12:55', instructors:['Master Han'], students:[], notes:'Umuganda Saturday — Kids adjusted class'},
+  {id:'ug3', type:'ta',  day:'Saturday', start:'13:00', end:'13:55', instructors:['Master Han'], students:[], notes:'Umuganda Saturday — Teen & Adult adjusted class'},
+];
+
+function renderUmugandaNotice() {
+  const el = document.getElementById('umuganda-notice');
+  if (!el) return;
+  if (isUmugandaWeek()) {
+    const ls = nextUmugandaDate();
+    const dateStr = ls.toLocaleDateString('en-US',{weekday:'long',day:'numeric',month:'long'});
+    el.style.display = 'flex';
+    el.innerHTML = `
+      \u003csvg viewBox="0 0 24 24">\u003cpath d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>\u003c/svg>
+      \u003cdiv class="umuganda-notice-body">
+        \u003cdiv class="umuganda-notice-title">RW Umuganda Saturday — ${dateStr}\u003c/div>
+        \u003cstrong>Schedule change in effect.\u003c/strong> Due to Rwanda's national community service (Umuganda), Saturday morning classes are adjusted:\u003cbr>
+        \u003cspan style="font-family:'JetBrains Mono',monospace;font-size:11px;display:block;margin-top:5px;line-height:1.8;color:var(--fg)">
+          11:15–11:55 · Little Dragons (3-5 yrs)\u003cbr>
+          12:00–12:55 · Kids Class (6-10 yrs)\u003cbr>
+          13:00–13:55 · Teen &amp; Adults (11+)
+        \u003c/span>
+        \u003cspan style="font-size:11px;color:var(--dim);margin-top:4px;display:block">Please be advised — students attending the 9:00 AM class should join the adjusted session instead.\u003c/span>
+      \u003c/div>`;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function renderSchedule(){
+  const sessions=APP.sessions;
+  document.getElementById('nb-sess').textContent=sessions.length;
+  const g=document.getElementById('sched-grid');
+  const umuganda = isUmugandaWeek();
+  renderUmugandaNotice();
+
+  // On Umuganda week, replace Saturday sessions with adjusted schedule
+  const effectiveSessions = sessions.map(s => {
+    if (umuganda && s.day === 'Saturday') return null; // remove normal Saturday
+    return s;
+  }).filter(Boolean);
+  if (umuganda) effectiveSessions.push(...UMUGANDA_SESSIONS);
+
+  let h='\u003cdiv class="sched-hdr">\u003c/div>';
+  DAYS.forEach(d=>{
+    const isUmugandaDay = umuganda && d==='Saturday';
+    const ugLabel = isUmugandaDay ? '\u003cdiv class="umuganda-label">\u003csvg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">\u003cpath d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>\u003c/svg>Umuganda\u003c/div>' : '';
+    h += '\u003cdiv class="sched-hdr dh ' + (isUmugandaDay ? 'umuganda-col-header' : '') + '">' + d + ugLabel + '\u003c/div>';
+  });
+  const bD={};DAYS.forEach(d=>bD[d]=[]);
+  effectiveSessions.forEach(s=>{if(bD[s.day])bD[s.day].push(s)});
+  DAYS.forEach(d=>bD[d].sort((a,b)=>a.start.localeCompare(b.start)));
+  const maxR=Math.max(...DAYS.map(d=>bD[d].length),3);
+  for(let r=0;r<maxR;r++){
+    const t=DAYS.map(d=>bD[d][r]?.start||'').filter(Boolean)[0]||'';
+    h+=`\u003cdiv class="sched-time-col">${t}\u003c/div>`;
+    DAYS.forEach(d=>{
+      const s=bD[d][r];
+      const isUmugandaDay = umuganda && d==='Saturday';
+      if(s){const m=TM[s.type];
+        const isUgSess = s.id && s.id.startsWith('ug');
+        const cellBg = isUmugandaDay ? "background:rgba(255,184,0,.04)" : "";
+        const onclk = isUgSess ? "showToast(this.dataset.m,\"gold\")" : ("openEditSess(\"" + s.id + "\")");
+        const ugNote = isUgSess ? " [RW]" : "";
+        const sparStr = s.type === "spar" ? "\u003cspan class=\"slot-star\">&#9733;\u003c/span>" : "";
+        h += "\u003cdiv class=\"sched-cell\" style=\"" + cellBg + "\">\u003cdiv class=\"sched-slot " + m.cls + "\" data-m=\"Umuganda session\" onclick=\"" + onclk + "\">\u003cdiv>\u003cdiv class=\"slot-type\">" + m.label + ugNote + "\u003c/div>\u003cdiv class=\"slot-time\">" + s.start + "&ndash;" + s.end + "\u003c/div>\u003c/div>\u003cdiv class=\"slot-count\">\u003csvg viewBox=\"0 0 24 24\">\u003ccircle cx=\"9\" cy=\"7\" r=\"4\"/>\u003cpath d=\"M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2\"/>\u003c/svg>" + s.students.length + sparStr + "\u003c/div>\u003c/div>\u003c/div>";
+      } else {
+        const cellBg2 = isUmugandaDay ? "background:rgba(255,184,0,.04)" : "";
+        const addOncl = isUmugandaDay ? "showToast(\"Umuganda Saturday - classes from 11:15 AM\",\"gold\")" : ("openNewSessDay(\"" + d + "\")");
+        h += "\u003cdiv class=\"sched-cell\" style=\"" + cellBg2 + "\">\u003cdiv class=\"add-slot\" onclick=\"" + addOncl + "\">+\u003c/div>\u003c/div>";
+      }
+    });
+  }
+  g.innerHTML=h;
+}

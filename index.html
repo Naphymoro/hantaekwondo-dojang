@@ -590,11 +590,27 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
   .portal-phone{width:100%;max-width:340px}
 }
 @media(max-width:440px){.metrics{grid-template-columns:1fr 1fr}.mc-val{font-size:28px}}
+
+.feature-drawer{margin:12px 0 18px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;display:none;box-shadow:0 12px 30px var(--shadow)}
+.feature-drawer.show{display:block;animation:pageIn .2s var(--ease)}
+.roster-grid,.market-grid,.event-grid,.wallet-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.roster-card,.market-card,.event-card,.wallet-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px}
+.avatar-xl{width:72px;height:72px;border-radius:22px;background:linear-gradient(135deg,var(--crimson),var(--gold));display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Rajdhani';font-size:25px;font-weight:700;box-shadow:0 8px 20px var(--shadow)}
+.avatar-sm{width:38px;height:38px;border-radius:12px;background:var(--cg);display:flex;align-items:center;justify-content:center;color:var(--crimson);font-weight:800;font-family:'Rajdhani'}
+.smart-note{font-size:11.5px;color:var(--muted);background:var(--ibg);border:1px solid var(--border);border-radius:10px;padding:9px;margin-top:6px}
+.session-check.muted{opacity:.45}.session-check.locked{outline:1px solid rgba(255,184,0,.35);background:rgba(255,184,0,.05)}
+.parent-profile-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px;margin-bottom:12px}
+.profile-line{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}.profile-line span:first-child{color:var(--dim)}.profile-line span:last-child{color:var(--fg);font-weight:700;text-align:right}
+.inactivity-warning{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:var(--card);border:1px solid rgba(255,184,0,.45);color:var(--fg);border-radius:12px;padding:11px 16px;box-shadow:0 12px 30px var(--shadow);z-index:5000;display:none;font-size:13px;max-width:calc(100vw - 30px)}
+.inactivity-warning.show{display:block}.wallet-balance{font-family:'Rajdhani';font-size:24px;font-weight:800;color:var(--teal)}
+@media(max-width:640px){.roster-grid,.market-grid,.event-grid,.wallet-grid{grid-template-columns:1fr}.portal-phone{border-radius:18px}.portal-body{padding:12px}.profile-line{font-size:11.5px}}
+
 </style>
 </head>
 <body>
 
 <!-- TOAST -->
+<div class="inactivity-warning" id="inactivity-warning">You have been inactive. You will be logged out soon for security.</div>
 <div class="toast" id="toast"><span class="toast-dot"></span><span id="toast-msg"></span></div>
 
 <!-- SESSION MODAL -->
@@ -672,6 +688,7 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
   </div>
 </div>
 
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
 <aside class="sidebar" id="sidebar">
   <div class="brand">
@@ -687,6 +704,8 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
     <button class="nav-btn" data-view="students"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.1a4 4 0 0 1 0 7.8M21 21v-2a4 4 0 0 0-3-3.9"/></svg>Students<span class="nav-badge" id="nb-stud">0</span></button>
     <button class="nav-btn" data-view="instructors"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Instructors<span class="nav-badge" id="nb-instr">0</span></button>
     <div class="nav-lbl" style="padding-left:0;margin-top:4px">Finance</div>
+    <button class="nav-btn" data-view="market" onclick="switchView('market')"><svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>Marketplace</button>
+    <button class="nav-btn" data-view="events" onclick="switchView('events')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Events</button>
     <button class="nav-btn" data-view="payments"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 14h4"/></svg>Payments</button>
     <div class="nav-lbl" style="padding-left:0;margin-top:4px">Portal</div>
     <button class="nav-btn" data-view="parent"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M10 18h4"/></svg>Parent Portal</button>
@@ -752,6 +771,7 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
         <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>Women's</div>
       </div>
       <div class="sched-wrap"><div class="sched-grid" id="sched-grid"></div></div>
+      <div class="feature-drawer" id="schedule-roster-drawer"></div>
       <div class="sh"><span class="sh-title">Subscription Rates</span></div>
       <div class="three-col">
         <div class="card" style="margin-bottom:0"><div class="card-body" style="text-align:center"><div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--teal)">RWF 150K</div><div style="font-size:12.5px;color:var(--muted);margin-top:3px">1 lesson / week</div><div style="font-size:10.5px;color:var(--dim);margin-top:2px">≈ RWF 600,000 / month</div></div></div>
@@ -810,7 +830,7 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
           <div class="form-row"><label class="form-label">Belt</label><select class="form-input" id="sf-belt"></select></div>
           <div class="form-row"><label class="form-label">Plan</label><select class="form-input" id="sf-plan"><option value="1">1 lesson / week</option><option value="2">2 lessons / week</option><option value="3">3 lessons / week</option></select></div>
         </div>
-        <div class="form-row"><label class="form-label">Parent PIN</label><input class="form-input" id="sf-pin" maxlength="4" inputmode="numeric" placeholder="4 digits"></div>
+        <div class="form-2"><div class="form-row"><label class="form-label">Parent/Guardian name</label><input class="form-input" id="sf-parent-name" placeholder="Parent full name"></div><div class="form-row"><label class="form-label">Parent phone</label><input class="form-input" id="sf-parent-phone" placeholder="+250..."></div></div><div class="form-2"><div class="form-row"><label class="form-label">Parent email</label><input class="form-input" id="sf-parent-email" placeholder="parent@email.com"></div><div class="form-row"><label class="form-label">Parent PIN</label><input class="form-input" id="sf-pin" maxlength="4" inputmode="numeric" placeholder="4 digits"></div></div><div class="smart-note" id="sf-age-note">Enter age to reveal eligible schedules only. Admin/Manager may override.</div>
         <div class="form-row"><label class="form-label">Assign sessions</label><div class="session-checks" id="sf-sessions"></div></div>
         <div class="smart-actions"><button class="btn-cancel" onclick="closeStudentForm()">Cancel</button><button class="save-btn" onclick="saveStudentSmart()">Save student</button></div>
       </div>
@@ -850,6 +870,20 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
         <div class="portal-notch"></div>
         <div style="padding:32px;text-align:center;color:var(--dim);font-size:12.5px">Select a student above to view their portal</div>
       </div></div>
+    </div>
+
+
+
+    <!-- ═══ MARKETPLACE ═══ -->
+    <div class="page" id="page-market">
+      <div class="sh"><span class="sh-title">Dojo Marketplace</span><button class="sh-btn primary admin-only" onclick="openProductSmartForm()">+ Add product</button></div>
+      <div class="market-grid" id="market-grid"></div>
+    </div>
+
+    <!-- ═══ EVENTS ═══ -->
+    <div class="page" id="page-events">
+      <div class="sh"><span class="sh-title">Dojo Events</span><button class="sh-btn primary admin-only" onclick="openEventSmartForm()">+ Add event</button></div>
+      <div class="event-grid" id="event-grid"></div>
     </div>
 
     <!-- ═══ SETTINGS ═══ -->
@@ -1013,7 +1047,7 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
       <input id="parent-pin-inp" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"
         class="form-input" placeholder="••••" style="margin-bottom:8px;letter-spacing:6px;font-size:20px;text-align:center"
         oninput="if(this.value.length===4)confirmParentLogin()"/>
-      <div id="parent-pin-error" style="text-align:center;font-size:12px;color:var(--crimson);height:16px;margin-bottom:6px"></div>
+      <div id="parent-pin-error" style="text-align:center;font-size:12px;color:var(--crimson);height:16px;margin-bottom:6px"></div><div id="auth-parent-err" style="display:none"></div>
       <!-- Remember me -->
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:12px;cursor:pointer">
         <input type="checkbox" id="parent-remember" style="accent-color:var(--crimson);width:15px;height:15px"/>
@@ -1132,7 +1166,7 @@ const TM={kid:{label:'Kid Lesson',cls:'slot-kid',badge:'p-gold'},ld:{label:'Litt
 const BC={'White':'b-white','Yellow':'b-yellow','Green':'b-green','Blue':'b-blue','Red':'b-red','Black 1st Dan':'b-black','Black 2nd Dan':'b-black','Black 3rd Dan':'b-black','Black 4th Dan':'b-black'};
 const BELT_OPTS=['White','Yellow','Green','Blue','Red','Black 1st Dan','Black 2nd Dan'];
 const METHODS=['MTN MoMo','Cash','Bank Transfer','Airtel Money'];
-const PM={dashboard:['DASHBOARD','Academy Overview'],schedule:['SCHEDULE','Weekly Timetable'],attendance:['ATTENDANCE','Check-In Engine'],students:['STUDENTS','Roster'],instructors:['INSTRUCTORS','Staff Management'],payments:['PAYMENTS','Fee Ledger'],parent:['PARENT PORTAL','Mobile View'],settings:['SETTINGS','Configuration']};
+const PM={dashboard:['DASHBOARD','Academy Overview'],schedule:['SCHEDULE','Weekly Timetable'],attendance:['ATTENDANCE','Check-In Engine'],students:['STUDENTS','Roster'],instructors:['INSTRUCTORS','Staff Management'],payments:['PAYMENTS','Fee Ledger'],parent:['PARENT PORTAL','Mobile View'],settings:['SETTINGS','Configuration'],market:['MARKETPLACE','Dojo Store'],events:['EVENTS','Announcements']};
 
 // ════════════════════════════════════════════
 // STORAGE
@@ -1152,6 +1186,11 @@ const APP={
   get instrAtt(){return ld('ht_ia',[])},set instrAtt(v){sv('ht_ia',v)},
   get payments(){return ld('ht_p',[])},set payments(v){sv('ht_p',v)},
   get absences(){return ld('ht_absences',[])},set absences(v){sv('ht_absences',v)},
+  get parents(){return ld('ht_parents',[])},set parents(v){sv('ht_parents',v)},
+  get wallet(){return ld('ht_wallet',[])},set wallet(v){sv('ht_wallet',v)},
+  get products(){return ld('ht_products',defProducts())},set products(v){sv('ht_products',v)},
+  get orders(){return ld('ht_orders',[])},set orders(v){sv('ht_orders',v)},
+  get events(){return ld('ht_events',defEvents())},set events(v){sv('ht_events',v)},
 };
 
 function defS(){return[
@@ -1189,6 +1228,17 @@ function defSt(){return[
 }
 function defI(){return[{id:'i1',name:'Master Han',role:'Head Instructor',belt:'Black 4th Dan',phone:'+250 788 000 001',email:'master@han-tkd.com',sessions:['Monday Kid 17:00','Monday Teen 18:00','Fri Sparring 14:00','Sat Kid 09:00']}];}
 
+function defProducts(){return[
+  {id:'prd1',name:'Dobok / Uniform',category:'Training Kit',price:45000,stock:20,desc:'Official taekwondo uniform with size options.'},
+  {id:'prd2',name:'Sparring Gear Set',category:'Protection',price:120000,stock:8,desc:'Head guard, gloves, shin guards and chest protector.'},
+  {id:'prd3',name:'Training T-Shirt',category:'Apparel',price:18000,stock:35,desc:'Dojo branded training shirt.'},
+  {id:'prd4',name:'Belt Replacement',category:'Grading',price:8000,stock:40,desc:'Replacement belts by rank and size.'}
+];}
+function defEvents(){return[
+  {id:'ev1',title:'Monthly Belt Grading',date:tds(),time:'10:00',location:'Han TKD Dojang',fee:25000,deadline:tds(),desc:'Promotion assessment for eligible students.',students:[]},
+  {id:'ev2',title:'Kigali Friendly Competition',date:tds(),time:'09:00',location:'Kigali Arena',fee:50000,deadline:tds(),desc:'Competition registration and travel notice.',students:[]}
+];}
+
 // ════════════════════════════════════════════
 // THEME
 // ════════════════════════════════════════════
@@ -1212,7 +1262,7 @@ function switchView(v){
   document.getElementById('tb-title').textContent=PM[v][0];
   document.getElementById('tb-sub').textContent=PM[v][1];
   closeSidebar();
-  ({schedule:renderSchedule,attendance:renderAttView,students:renderStudents,instructors:renderInstructors,payments:renderPayments,parent:renderPortalList,dashboard:renderDashboard})[v]?.();
+  ({schedule:renderSchedule,attendance:renderAttView,students:renderStudents,instructors:renderInstructors,payments:renderPayments,parent:renderPortalList,dashboard:renderDashboard,market:renderMarketplace,events:renderEvents})[v]?.();
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
 function toggleSidebar(){const s=document.getElementById('sidebar'),bd=document.getElementById('sidebarBackdrop');s.classList.toggle('open');bd.classList.toggle('show')}
@@ -1232,10 +1282,10 @@ let parentStudentId = null;
 
 // ── NAV VISIBILITY PER ROLE ──────────────────
 const ROLE_NAV = {
-  admin:      ['dashboard','schedule','attendance','students','instructors','payments','parent','settings'],
-  manager:    ['dashboard','schedule','attendance','students','instructors','payments','parent','settings'],
-  instructor: ['dashboard','schedule','attendance','parent'],
-  parent:     ['schedule','parent'],
+  admin:      ['dashboard','schedule','attendance','students','instructors','payments','market','events','parent','settings'],
+  manager:    ['dashboard','schedule','attendance','students','instructors','payments','market','events','parent','settings'],
+  instructor: ['dashboard','schedule','attendance','events','parent'],
+  parent:     ['schedule','market','events','parent'],
 };
 
 const ROLE_CHIP_CONFIG = {
@@ -1321,17 +1371,9 @@ function applyUIRestrictions(role) {
   document.querySelectorAll('.nav-btn[data-view="settings"]').forEach(b => {
     b.style.display = role === 'admin' ? '' : 'none';
   });
-  // Payments nav item — admin only
-  document.querySelectorAll('.nav-btn[data-view="payments"]').forEach(b => {
-    b.style.display = role === 'admin' ? '' : 'none';
-  });
-  // Students nav — admin only
-  document.querySelectorAll('.nav-btn[data-view="students"]').forEach(b => {
-    b.style.display = role === 'admin' ? '' : 'none';
-  });
-  // Instructors nav — admin only
-  document.querySelectorAll('.nav-btn[data-view="instructors"]').forEach(b => {
-    b.style.display = role === 'admin' ? '' : 'none';
+  // Manager has operational + financial access; settings remains admin-only
+  document.querySelectorAll('.nav-btn[data-view="payments"],.nav-btn[data-view="students"],.nav-btn[data-view="instructors"],.nav-btn[data-view="market"],.nav-btn[data-view="events"]').forEach(b => {
+    b.style.display = isAdminLevel ? '' : (allowed.includes(b.dataset.view) ? '' : 'none');
   });
 }
 
@@ -2132,7 +2174,7 @@ function initPWA() {
   // ── Handle deep link shortcuts (?view=attendance etc) ──
   const urlParams = new URLSearchParams(window.location.search);
   const targetView = urlParams.get('view');
-  if (targetView && ['dashboard','schedule','attendance','students','instructors','payments','parent','settings'].includes(targetView)) {
+  if (targetView && ['dashboard','schedule','attendance','students','instructors','payments','market','events','parent','settings'].includes(targetView)) {
     switchView(targetView);
   }
 }
@@ -2412,6 +2454,123 @@ function confirmParentLogin() {
   applyRole('parent');
   showToast('Welcome, ' + s.name + String.fromCharCode(39) + 's parent');
 }
+
+
+
+// ════════════════════════════════════════════
+// PLATFORM UPGRADE: age-filtered schedules, rosters, persistence, wallet, market, events
+// ════════════════════════════════════════════
+function initials(name){return (name||'?').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase()||'?'}
+function sessionAgeRange(type){return type==='ld'?[3,5]:type==='kid'?[6,10]:type==='ta'?[11,99]:type==='women'?[11,99]:type==='spar'?[8,99]:[3,99]}
+function isSessionAgeEligible(age,sess){const r=sessionAgeRange(sess.type);return Number(age)>=r[0]&&Number(age)<=r[1]}
+function eligibleSessionsForAge(age){return APP.sessions.filter(sess=>isSessionAgeEligible(age,sess))}
+function ensureParentForStudent(st){
+  let parents=APP.parents; let pid=st.parentId;
+  let parent=pid?parents.find(p=>p.id===pid):null;
+  if(!parent){
+    const year=new Date().getFullYear(); const seq=String(parents.length+1).padStart(4,'0');
+    parent={id:`PAR-${year}-${seq}`,name:st.parentName||'Parent / Guardian',phone:st.parentPhone||'',email:st.parentEmail||'',children:[st.id],createdAt:Date.now()};
+    parents.push(parent);
+  }else{
+    parent.name=st.parentName||parent.name; parent.phone=st.parentPhone||parent.phone; parent.email=st.parentEmail||parent.email;
+    parent.children=Array.from(new Set([...(parent.children||[]),st.id]));
+  }
+  APP.parents=parents; return parent.id;
+}
+function walletBalance(ownerId){return APP.wallet.filter(t=>t.ownerId===ownerId).reduce((sum,t)=>sum+(t.type==='debit'?-Number(t.amount):Number(t.amount)),0)}
+function walletTxn(ownerId,type,amount,purpose,studentId='',notes=''){
+  const tx=APP.wallet; tx.push({id:'WAL-'+Date.now(),ownerId,type,amount:Number(amount)||0,purpose,studentId,staff:currentRole||'system',date:tds(),ts:Date.now(),notes}); APP.wallet=tx; renderPortal(); renderPayments(); showToast('Wallet transaction saved');
+}
+function paymentState(st){const fees=[0,APP.lessonFee*4,APP.lessonFee*8,APP.lessonFee*12];const paid=APP.payments.some(p=>p.studentId===st.id&&p.period===mLabel()&&p.status==='paid');const p=APP.parents.find(x=>x.id===st.parentId);const bal=walletBalance(st.parentId||'');return {fee:fees[st.plan]||0,paid,bal,parent:p,status:paid?'paid':bal>0?'wallet-funded':'overdue'};}
+
+// Replace schedule click behavior with roster drawer. Admins can still edit from drawer.
+function renderSchedule(){
+  const sessions=APP.sessions; const g=document.getElementById('sched-grid'); if(!g)return;
+  document.getElementById('nb-sess').textContent=sessions.length; renderUmugandaNotice();
+  const umuganda=isUmugandaWeek(); const effective=sessions.filter(s=>!(umuganda&&s.day==='Saturday')).concat(umuganda?UMUGANDA_SESSIONS:[]);
+  let h='<div class="sched-hdr"></div>';
+  DAYS.forEach(d=>{const ug=umuganda&&d==='Saturday';h+=`<div class="sched-hdr dh ${ug?'umuganda-col-header':''}">${d}${ug?'<div class="umuganda-label">Umuganda</div>':''}</div>`});
+  const by={};DAYS.forEach(d=>by[d]=[]); effective.forEach(sess=>{if(by[sess.day])by[sess.day].push(sess)}); DAYS.forEach(d=>by[d].sort((a,b)=>a.start.localeCompare(b.start)));
+  const maxR=Math.max(...DAYS.map(d=>by[d].length),3);
+  for(let r=0;r<maxR;r++){
+    const t=DAYS.map(d=>by[d][r]?.start||'').filter(Boolean)[0]||''; h+=`<div class="sched-time-col">${t}</div>`;
+    DAYS.forEach(d=>{const sess=by[d][r]; const ug=umuganda&&d==='Saturday';
+      if(sess){const m=TM[sess.type]||TM.kid; const isUg=(sess.id||'').startsWith('ug'); const roster=APP.students.filter(st=>isStudentScheduled(st,sess)).length;
+        h+=`<div class="sched-cell" style="${ug?'background:rgba(255,184,0,.04)':''}"><div class="sched-slot ${m.cls}" onclick="openScheduleRoster('${sess.id}')"><div><div class="slot-type">${m.label}${isUg?' [RW]':''}</div><div class="slot-time">${sess.start}&ndash;${sess.end}</div></div><div class="slot-count"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>${roster}</div></div></div>`;
+      } else h+=`<div class="sched-cell" style="${ug?'background:rgba(255,184,0,.04)':''}"><div class="add-slot" onclick="${ug?'showToast(\'Umuganda Saturday - classes from 11:15 AM\',\'gold\')':'openNewSessDay(\''+d+'\')'}">+</div></div>`;
+    });
+  }
+  g.innerHTML=h;
+}
+function openScheduleRoster(sessId){
+  const drawer=document.getElementById('schedule-roster-drawer'); if(!drawer)return;
+  const sess=APP.sessions.find(x=>x.id===sessId)||UMUGANDA_SESSIONS.find(x=>x.id===sessId); if(!sess)return;
+  const roster=APP.students.filter(st=>isStudentScheduled(st,sess));
+  drawer.classList.add('show');
+  drawer.innerHTML=`<div class="smart-form-head"><span class="smart-form-title">${sessionLabel(sess)} · ${roster.length} students</span><div style="display:flex;gap:6px"><button class="sh-btn admin-only" onclick="openEditSess('${sess.id}')">Edit session</button><button class="btn-cancel" onclick="this.closest('.feature-drawer').classList.remove('show')">Close</button></div></div>
+  <div class="roster-grid">${roster.length?roster.map(st=>{const ps=paymentState(st);const today=APP.attendance.find(a=>a.studentId===st.id&&a.sessionId===sess.id&&a.date===tds());const mAtt=APP.attendance.filter(a=>a.studentId===st.id&&a.date.startsWith(mths())).length;return `<div class="roster-card"><div style="display:flex;gap:10px;align-items:center"><div class="avatar-sm">${initials(st.name)}</div><div><div style="font-weight:800;color:var(--fg)">${st.name}</div><div style="font-size:11px;color:var(--muted)">${st.age} yrs · ${st.belt}</div></div></div><div class="profile-line"><span>Parent</span><span>${ps.parent?.name||st.parentName||'—'}</span></div><div class="profile-line"><span>Payment</span><span class="pill ${ps.status==='paid'?'p-green':ps.status==='wallet-funded'?'p-teal':'p-red'}">${ps.status}</span></div><div class="profile-line"><span>Today</span><span>${today?today.status||'present':'not marked'}</span></div><div class="profile-line"><span>Promotion</span><span>${mAtt>=12?'Eligible':'In progress'}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button class="sh-btn primary" onclick="markAtt('${st.id}','present')">Attendance</button><button class="sh-btn" onclick="switchView('parent');document.getElementById('portal-sel').value='${st.id}';renderPortal()">Profile</button></div></div>`}).join(''):'<div class="smart-note">No students are assigned to this session yet.</div>'}</div>`;
+  drawer.scrollIntoView({behavior:'smooth',block:'start'}); applyUIRestrictions(currentRole);
+}
+
+// Age-filtered student session checks.
+function renderSessionChecks(selected=[]){
+  const box=document.getElementById('sf-sessions'); if(!box)return; const age=Number(document.getElementById('sf-age')?.value||0); const selectedSet=new Set(selected||[]); const isAdminLevel=currentRole==='admin'||currentRole==='manager';
+  if(!age){box.innerHTML='<div class="smart-note">Enter age first. Eligible class schedules will appear here.</div>';return;}
+  const eligible=APP.sessions.filter(sess=>isSessionAgeEligible(age,sess)); const chosenNonEligible=APP.sessions.filter(sess=>selectedSet.has(sess.id)&&!isSessionAgeEligible(age,sess)); const visible=[...eligible,...chosenNonEligible.filter(x=>!eligible.some(e=>e.id===x.id))];
+  box.innerHTML=visible.length?visible.map(sess=>{const ok=isSessionAgeEligible(age,sess);return `<label class="session-check ${ok?'':'locked'}"><input type="checkbox" value="${sess.id}" ${selectedSet.has(sess.id)?'checked':''} ${!ok&&!isAdminLevel?'disabled':''}><span>${sessionLabel(sess)} ${ok?'':(isAdminLevel?' · override':' · age restricted')}</span></label>`}).join(''):'<div class="smart-note">No class schedule currently matches this student’s age.</div>';
+  const note=document.getElementById('sf-age-note'); if(note)note.textContent=visible.length?'Only age-appropriate schedules are shown. Admin/Manager can override restricted assigned sessions.':'No class schedule currently matches this student’s age.';
+}
+function openStudentForm(st=null){
+  editStudentId=st?.id||null; document.getElementById('student-form-title').textContent=st?'Edit Student / Assign Sessions':'Add Student'; document.getElementById('sf-belt').innerHTML=BELT_OPTS.map(b=>`<option value="${b}">${b}</option>`).join('');
+  document.getElementById('sf-name').value=st?.name||''; document.getElementById('sf-age').value=st?.age||''; document.getElementById('sf-belt').value=st?.belt||'White'; document.getElementById('sf-plan').value=st?.plan||2; document.getElementById('sf-pin').value=st?.parentPin||'0000';
+  document.getElementById('sf-parent-name').value=st?.parentName||''; document.getElementById('sf-parent-phone').value=st?.parentPhone||''; document.getElementById('sf-parent-email').value=st?.parentEmail||'';
+  renderSessionChecks(studentSessionIds(st)); const ageEl=document.getElementById('sf-age'); ageEl.oninput=()=>renderSessionChecks([...document.querySelectorAll('#sf-sessions input:checked')].map(x=>x.value));
+  document.getElementById('student-smart-form').classList.add('show'); document.getElementById('student-smart-form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function saveStudentSmart(){
+  const name=document.getElementById('sf-name').value.trim(); if(!name){showToast('Student name is required','err');return;}
+  const checked=[...document.querySelectorAll('#sf-sessions input:checked')].map(x=>x.value); const age=parseInt(document.getElementById('sf-age').value||'0'); if(!age){showToast('Age is required to assign schedule','err');return;}
+  const belt=document.getElementById('sf-belt').value; const plan=Math.min(3,Math.max(1,parseInt(document.getElementById('sf-plan').value||'2'))); const phone=document.getElementById('sf-parent-phone').value.trim(); const pin=(document.getElementById('sf-pin').value||phone.slice(-4)||'0000').slice(-4)||'0000';
+  const students=APP.students; const data={name,age,belt:BELT_OPTS.includes(belt)?belt:'White',plan,parentPin:pin,parentName:document.getElementById('sf-parent-name').value.trim(),parentPhone:phone,parentEmail:document.getElementById('sf-parent-email').value.trim(),sessions:checked,avatar:null,subscriptionPackage:['—','1x/week','2x/week','3x/week'][plan],promotionDate:'TBD',ugandaNotice:'Pending acknowledgement'}; let saved;
+  if(editStudentId){const idx=students.findIndex(s=>s.id===editStudentId); if(idx<0)return; saved={...students[idx],...data}; students[idx]=saved;} else {saved={id:'st'+Date.now(),...data}; students.push(saved);} saved.parentId=ensureParentForStudent(saved); if(editStudentId){const idx=students.findIndex(s=>s.id===saved.id); students[idx]=saved;}
+  APP.students=students; syncStudentSessionAssignments(saved); renderStudents(); renderPortalList(); renderDashboard(); renderSchedule(); renderAttView(); closeStudentForm(); showToast(editStudentId?'Student updated':'Student enrolled');
+}
+function renderStudents(){
+  const students=APP.students,att=APP.attendance,fees=[0,APP.lessonFee*4,APP.lessonFee*8,APP.lessonFee*12],plans=['—','1x/wk','2x/wk','3x/wk']; document.getElementById('nb-stud').textContent=students.length;
+  document.getElementById('students-body').innerHTML=students.map(st=>{const cnt=att.filter(a=>a.studentId===st.id&&a.date.startsWith(mths())&&(a.status||'present')!=='absent').length;const req=st.plan*4;const pct=req>0?Math.round(cnt/req*100):0;const assigned=studentSessionIds(st).map(id=>APP.sessions.find(x=>x.id===id)).filter(Boolean);const ps=paymentState(st);const assignedText=assigned.length?assigned.slice(0,2).map(sessionLabel).join('<br>')+(assigned.length>2?`<br><span style="color:var(--dim)">+${assigned.length-2} more</span>`:''):'<span style="color:var(--dim)">No sessions</span>';return `<tr><td class="nm">${st.name}<div style="font-size:10px;color:var(--dim)">${st.parentId||'parent pending'}</div></td><td>${st.age}</td><td><span class="belt ${BC[st.belt]||'b-white'}"><span class="belt-sw"></span>${st.belt}</span></td><td><span class="pill ${st.plan===1?'p-teal':st.plan===2?'p-blue':'p-gold'}">${plans[st.plan]}</span></td><td style="min-width:170px">${assignedText}</td><td class="mono">RWF ${(fees[st.plan]||0).toLocaleString()}</td><td><div style="display:flex;align-items:center;gap:6px"><span class="mono">${cnt}/${req}</span><div class="pbar" style="width:55px"><div class="pbar-fill ${pct>=80?'pf-teal':pct>=50?'pf-gold':'pf-red'}" style="width:${pct}%"></div></div></div></td><td><span class="pill ${ps.status==='paid'?'p-green':ps.status==='wallet-funded'?'p-teal':'p-red'}">${ps.status}</span></td><td><div style="display:flex;gap:5px;flex-wrap:wrap"><button class="sh-btn" style="padding:3px 8px;font-size:11px" onclick="editStudent('${st.id}')">Edit</button><button class="sh-btn primary" style="padding:3px 8px;font-size:11px" onclick="assignStudentSessions('${st.id}')">Assign Session</button></div></td></tr>`;}).join('');
+}
+
+function renderPortal(){
+  const id=document.getElementById('portal-sel').value||parentStudentId; if(!id)return; const st=APP.students.find(x=>x.id===id); if(!st)return; const sessions=APP.sessions.filter(s=>isStudentScheduled(st,s)); const att=APP.attendance.filter(a=>a.studentId===id); const mAtt=att.filter(a=>a.date.startsWith(mths())); const req=(st.plan||1)*4; const pct=req?Math.min(100,Math.round(mAtt.length/req*100)):0; const ps=paymentState(st); const nextPromo=mAtt.length>=12?'Eligible now':(st.promotionDate||'After progress review'); const events=APP.events.filter(e=>!e.students?.length||e.students.includes(id)).slice(0,3); const orders=APP.orders.filter(o=>o.studentId===id).slice(-3);
+  document.getElementById('portal-phone').innerHTML=`<div class="portal-notch"></div><div class="portal-hero"><div class="portal-hero-glow"></div><div class="avatar-xl" style="margin:0 auto 10px">${initials(st.name)}</div><div class="portal-name">${st.name}</div><div class="portal-cls"><span class="belt ${BC[st.belt]||'b-white'}" style="display:inline-flex"><span class="belt-sw"></span>${st.belt}</span> · ${st.age} yrs · ${st.subscriptionPackage||''}</div></div><div class="portal-body"><div class="parent-profile-card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div class="pb-lbl">Dojo Wallet</div><div class="wallet-balance">RWF ${walletBalance(st.parentId||'').toLocaleString()}</div></div><div style="display:flex;gap:6px;align-items:center"><input class="form-input" id="wallet-topup-${st.id}" type="number" placeholder="Amount" style="width:95px;padding:8px"><button class="sh-btn primary" onclick="walletTxn('${st.parentId||''}','credit',document.getElementById('wallet-topup-${st.id}').value||0,'top-up','${st.id}','Parent top-up')">Top up</button></div></div></div>${ps.status==='paid'?'<div class="portal-alert portal-teal-alert"><div class="portal-alert-text"><strong>Tuition paid</strong> — current package is active.</div></div>':`<div class="portal-alert"><div class="portal-alert-text"><strong>Payment due</strong> — RWF ${ps.fee.toLocaleString()} for ${mLabel()}. ${ps.bal>0?'Wallet funds available.':'Please top up wallet or pay.'}</div></div>`}<div class="p-stats"><div class="p-stat"><div class="p-stat-val" style="color:var(--teal)">${mAtt.length}</div><div class="p-stat-lbl">Sessions this month</div></div><div class="p-stat"><div class="p-stat-val" style="color:var(--gold)">${pct}%</div><div class="p-stat-lbl">Attendance rate</div></div></div><div class="parent-profile-card"><div class="pb-lbl">Full Profile</div><div class="profile-line"><span>Parent ID</span><span>${st.parentId||'Auto-generated'}</span></div><div class="profile-line"><span>Guardian</span><span>${ps.parent?.name||st.parentName||'—'}</span></div><div class="profile-line"><span>Sessions</span><span>${sessions.map(sessionLabel).join('<br>')||'Not assigned'}</span></div><div class="profile-line"><span>Subscription</span><span>${st.subscriptionPackage||'—'}</span></div><div class="profile-line"><span>Payment</span><span>${ps.status}</span></div><div class="profile-line"><span>Uganda/Umuganda notice</span><span>${st.ugandaNotice||'Pending'}</span></div><div class="profile-line"><span>Progress</span><span>${pct>=80?'Strong progress':'In progress'}</span></div><div class="profile-line"><span>Promotion date</span><span>${nextPromo}</span></div></div><div class="portal-block"><div class="pb-lbl">Recent Attendance</div>${att.slice(-5).reverse().map(a=>`<div class="profile-line"><span>${a.date}</span><span>${a.status||'present'}</span></div>`).join('')||'<div class="smart-note">No attendance yet.</div>'}</div><div class="portal-block"><div class="pb-lbl">Events</div>${events.map(e=>`<div class="profile-line"><span>${e.date}</span><span>${e.title}</span></div>`).join('')||'<div class="smart-note">No upcoming events.</div>'}</div><div class="portal-block"><div class="pb-lbl">Marketplace Orders</div>${orders.map(o=>`<div class="profile-line"><span>${o.item}</span><span>${o.status}</span></div>`).join('')||'<div class="smart-note">No merchandise orders yet.</div>'}</div><button class="portal-pay" onclick="walletTxn('${st.parentId||''}','debit',${ps.fee},'tuition','${st.id}','Monthly tuition payment')">Pay tuition from wallet</button></div>`;
+}
+
+function renderMarketplace(){const grid=document.getElementById('market-grid'); if(!grid)return; grid.innerHTML=APP.products.map(p=>`<div class="market-card"><div class="avatar-xl" style="width:100%;height:110px;border-radius:14px;margin-bottom:10px">${p.category?.[0]||'K'}</div><div style="font-weight:800;color:var(--fg)">${p.name}</div><div style="font-size:11px;color:var(--muted);margin:3px 0">${p.category} · Stock ${p.stock}</div><div style="font-family:'Rajdhani';font-size:22px;font-weight:800;color:var(--gold)">RWF ${Number(p.price).toLocaleString()}</div><div style="font-size:12px;color:var(--muted);margin:6px 0 10px">${p.desc||''}</div><button class="sh-btn primary" onclick="orderProduct('${p.id}')">Request / Buy</button></div>`).join('')}
+function orderProduct(pid){const p=APP.products.find(x=>x.id===pid);let sid=parentStudentId||document.getElementById('portal-sel')?.value||APP.students[0]?.id; if(!p||!sid){showToast('Select a student first','err');return;} const st=APP.students.find(x=>x.id===sid); const orders=APP.orders; orders.push({id:'ORD-'+Date.now(),productId:pid,item:p.name,studentId:sid,parentId:st?.parentId,amount:p.price,status:'requested',date:tds()}); APP.orders=orders; showToast('Marketplace order requested'); renderPortal();}
+function openProductSmartForm(){
+  const grid=document.getElementById('market-grid'); if(!grid)return; renderMarketplace();
+  grid.insertAdjacentHTML('afterbegin',`<div class="market-card" style="border-color:rgba(255,30,60,.35)"><div class="smart-form-title">New Product</div><div class="form-row"><label class="form-label">Name</label><input class="form-input" id="prd-name"></div><div class="form-2"><div class="form-row"><label class="form-label">Category</label><input class="form-input" id="prd-cat" value="Gear"></div><div class="form-row"><label class="form-label">Price RWF</label><input class="form-input" id="prd-price" type="number"></div></div><div class="form-row"><label class="form-label">Stock</label><input class="form-input" id="prd-stock" type="number" value="1"></div><div class="form-row"><label class="form-label">Description</label><textarea class="form-input" id="prd-desc" rows="2"></textarea></div><div class="smart-actions"><button class="btn-cancel" onclick="renderMarketplace()">Cancel</button><button class="save-btn" onclick="saveProductSmart()">Save product</button></div></div>`);
+}
+function saveProductSmart(){const name=document.getElementById('prd-name')?.value.trim(); if(!name){showToast('Product name required','err');return;} const products=APP.products; products.push({id:'prd'+Date.now(),name,category:document.getElementById('prd-cat').value||'Gear',price:Number(document.getElementById('prd-price').value||0),stock:Number(document.getElementById('prd-stock').value||0),desc:document.getElementById('prd-desc').value||''}); APP.products=products; renderMarketplace(); showToast('Product added');}
+function renderEvents(){const grid=document.getElementById('event-grid'); if(!grid)return; grid.innerHTML=APP.events.map(e=>`<div class="event-card"><div style="font-weight:900;color:var(--fg);font-size:15px">${e.title}</div><div style="font-size:12px;color:var(--muted);margin:4px 0">${e.date} ${e.time||''} · ${e.location||'Dojo'}</div><div style="font-size:12px;color:var(--muted);margin-bottom:8px">${e.desc||''}</div><div class="profile-line"><span>Fee</span><span>RWF ${Number(e.fee||0).toLocaleString()}</span></div><div class="profile-line"><span>Deadline</span><span>${e.deadline||'—'}</span></div><div class="profile-line"><span>Registered</span><span>${(e.students||[]).length}</span></div><button class="sh-btn primary" onclick="registerEvent('${e.id}')">Register student</button></div>`).join('')}
+function registerEvent(eid){let sid=parentStudentId||document.getElementById('portal-sel')?.value||APP.students[0]?.id; if(!sid){showToast('Select a student first','err');return;} const events=APP.events; const e=events.find(x=>x.id===eid); if(!e)return; e.students=Array.from(new Set([...(e.students||[]),sid])); APP.events=events; showToast('Event registration saved'); renderEvents(); renderPortal();}
+function openEventSmartForm(){
+  const grid=document.getElementById('event-grid'); if(!grid)return; renderEvents();
+  grid.insertAdjacentHTML('afterbegin',`<div class="event-card" style="border-color:rgba(255,30,60,.35)"><div class="smart-form-title">New Event</div><div class="form-row"><label class="form-label">Title</label><input class="form-input" id="ev-title"></div><div class="form-2"><div class="form-row"><label class="form-label">Date</label><input class="form-input" id="ev-date" type="date" value="${tds()}"></div><div class="form-row"><label class="form-label">Time</label><input class="form-input" id="ev-time" value="10:00"></div></div><div class="form-row"><label class="form-label">Location</label><input class="form-input" id="ev-location" value="Han TKD Dojang"></div><div class="form-2"><div class="form-row"><label class="form-label">Fee RWF</label><input class="form-input" id="ev-fee" type="number" value="0"></div><div class="form-row"><label class="form-label">Deadline</label><input class="form-input" id="ev-deadline" type="date" value="${tds()}"></div></div><div class="form-row"><label class="form-label">Description</label><textarea class="form-input" id="ev-desc" rows="2"></textarea></div><div class="smart-actions"><button class="btn-cancel" onclick="renderEvents()">Cancel</button><button class="save-btn" onclick="saveEventSmart()">Save event</button></div></div>`);
+}
+function saveEventSmart(){const title=document.getElementById('ev-title')?.value.trim(); if(!title){showToast('Event title required','err');return;} const events=APP.events; events.push({id:'ev'+Date.now(),title,date:document.getElementById('ev-date').value||tds(),time:document.getElementById('ev-time').value||'',location:document.getElementById('ev-location').value||'',fee:Number(document.getElementById('ev-fee').value||0),deadline:document.getElementById('ev-deadline').value||tds(),desc:document.getElementById('ev-desc').value||'',students:[]}); APP.events=events; renderEvents(); showToast('Event added');}
+
+// Persistent login + inactivity security.
+function saveSessionState(role){sv('ht_current_role',role);sv('ht_parent_student',parentStudentId);sv('ht_session',{role,parentStudentId,expiry:Date.now()+7*86400000});}
+const _oldApplyRole=applyRole; applyRole=function(role,instrName){_oldApplyRole(role,instrName); saveSessionState(role); resetInactivityTimer();};
+const _oldShowAuthScreen=showAuthScreen; showAuthScreen=function(){localStorage.removeItem('ht_session'); _oldShowAuthScreen();};
+logoutRole=function(){localStorage.removeItem('ht_session'); sv('ht_current_role',null); sv('ht_parent_student',null); parentStudentId=null; currentRole=null; document.body.removeAttribute('data-role'); _oldShowAuthScreen();};
+const _oldPinSubmit=pinSubmit; pinSubmit=function(){const pins=getPins(); if(pinBuffer===pins[authTargetRole]){hideAuthScreen(); applyRole(authTargetRole); showToast('Welcome, '+ROLE_CHIP_CONFIG[authTargetRole].label);} else _oldPinSubmit();};
+confirmParentLogin=function(){const sel=document.getElementById('auth-student-sel'), pinEl=document.getElementById('parent-pin-inp'), errEl=document.getElementById('parent-pin-error'); if(!sel||!sel.value){showToast('Please select your child','err');return;} const st=APP.students.find(x=>x.id===sel.value); if(!st){showToast('Student not found','err');return;} const entered=pinEl?pinEl.value.trim():''; if(entered!==(st.parentPin||'0000')){if(errEl)errEl.textContent='Incorrect PIN — use last 4 digits of your registered phone'; if(pinEl){pinEl.value='';pinEl.focus();} return;} if(errEl)errEl.textContent=''; parentStudentId=sel.value; hideAuthScreen(); applyRole('parent'); showToast('Welcome, '+st.name+String.fromCharCode(39)+'s parent');};
+let inactivityWarnT=null,inactivityLogoutT=null;
+function resetInactivityTimer(){clearTimeout(inactivityWarnT);clearTimeout(inactivityLogoutT);document.getElementById('inactivity-warning')?.classList.remove('show'); if(!currentRole)return; inactivityWarnT=setTimeout(()=>{document.getElementById('inactivity-warning')?.classList.add('show');},180000); inactivityLogoutT=setTimeout(()=>{showToast('Logged out for inactivity','gold'); logoutRole();},210000);}
+['click','keydown','touchstart','scroll','mousemove'].forEach(ev=>window.addEventListener(ev,resetInactivityTimer,{passive:true}));
+
 
 // INIT
 renderDashboard();renderSchedule();renderStudents();renderInstructors();renderPayments();renderPortalList();
