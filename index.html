@@ -441,7 +441,7 @@ select.form-input option{background:var(--card);color:var(--fg)}
 
 /* ═══════════════════ ROLE AUTH / LOGIN ═══════════════════ */
 .auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;animation:pageIn .3s var(--ease)}
-.auth-box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r3);overflow:hidden;box-shadow:0 24px 60px var(--shadow)}
+.auth-box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r3);overflow:hidden;box-shadow:0 24px 60px var(--shadow);margin:auto 0;max-height:calc(100vh - 40px);overflow-y:auto}
 .auth-hero{background:linear-gradient(135deg,#180005 0%,#220010 50%,#0F1020 100%);padding:28px 24px 22px;text-align:center;position:relative;overflow:hidden}
 [data-theme="light"] .auth-hero{background:linear-gradient(135deg,#fff0f0,#ffd6d6,#f0f4ff)}
 .auth-hero-glow{position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;background:radial-gradient(ellipse,rgba(255,30,60,.25),transparent 70%);pointer-events:none}
@@ -898,7 +898,7 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
 
 
 <!-- ═══════════════════ AUTH / LOGIN SCREEN ═══════════════════ -->
-<div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px">
+<div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch">
   <div class="auth-box">
     <!-- Hero -->
     <div class="auth-hero">
@@ -909,7 +909,7 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
       <div style="font-size:11.5px;color:var(--muted);letter-spacing:.5px">Digital Dojang · Since 2016</div>
     </div>
     <!-- Role selector -->
-    <div style="padding:20px 20px 0">
+    <div id="auth-role-step" style="padding:20px 20px 0">
       <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Select your role</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <button class="auth-role-btn" data-role="admin"     onclick="selectAuthRole('admin')"
@@ -1331,8 +1331,13 @@ function hideAuthScreen() {
 }
 
 function showAuthStep(step) {
-  ['role','pin','parent'].forEach(s => {
-    document.getElementById('auth-step-' + s).style.display = s === step ? 'block' : 'none';
+  const map = {
+    role: document.getElementById('auth-role-step'),
+    pin: document.getElementById('auth-pin-step'),
+    parent: document.getElementById('auth-parent-step')
+  };
+  Object.entries(map).forEach(([name, el]) => {
+    if(el) el.style.display = name === step ? 'block' : 'none';
   });
   if(step === 'pin') resetPinUI();
 }
@@ -1361,7 +1366,7 @@ function selectAuthRole(role) {
 // ── PIN PAD ──────────────────────────────────
 function resetPinUI() {
   pinBuffer = '';
-  document.getElementById('auth-err').textContent = '';
+  document.getElementById('auth-error').textContent = '';
   for(let i=0;i<4;i++) {
     const d = document.getElementById('pd' + i);
     d.className = 'auth-pin-dot';
@@ -1375,6 +1380,9 @@ function pinInput(digit) {
   if(d) d.classList.add('filled');
   if(pinBuffer.length === 4) setTimeout(pinSubmit, 150);
 }
+
+function pinBack() { pinDelete(); }
+function pinClear() { pinBuffer = ''; resetPinUI(); }
 
 function pinDelete() {
   if(pinBuffer.length === 0) return;
@@ -1392,7 +1400,7 @@ function pinSubmit() {
     showToast('Welcome, ' + ROLE_CHIP_CONFIG[authTargetRole].label);
   } else {
     // Wrong PIN — shake dots
-    document.getElementById('auth-err').textContent = 'Incorrect PIN — try again';
+    document.getElementById('auth-error').textContent = 'Incorrect PIN — try again';
     for(let i=0;i<4;i++) {
       const d = document.getElementById('pd' + i);
       d.classList.add('error');
@@ -1638,7 +1646,7 @@ function renderSchedule(){
   effectiveSessions.forEach(s=>{if(bD[s.day])bD[s.day].push(s)});
   DAYS.forEach(d=>bD[d].sort((a,b)=>a.start.localeCompare(b.start)));
   const maxR=Math.max(...DAYS.map(d=>bD[d].length),3);
-  for(let r=0;r\u003cmaxR;r++){
+  for(let r=0;r<maxR;r++){
     const t=DAYS.map(d=>bD[d][r]?.start||'').filter(Boolean)[0]||'';
     h+=`\u003cdiv class="sched-time-col">${t}\u003c/div>`;
     DAYS.forEach(d=>{
@@ -1914,7 +1922,7 @@ function renderPortal(){
         \u003c/button>
       \u003c/div>
       \u003cbutton class="portal-pay" onclick="showToast('MTN MoMo payment link sent to parent','gold')">💳 Pay via MTN MoMo\u003c/button>
-    \u003c/div>\`;
+    \u003c/div>`;
 }
 
 // ════════════════════════════════════════════
@@ -2180,7 +2188,7 @@ function renderAbsences(){
           (a.note ? ' &nbsp;·&nbsp; \u003cem>'+a.note+'\u003c/em>' : '') +
         '\u003c/div>' +
       '\u003c/div>' +
-      '\u003cbutton onclick="acknowledgeAbsence(''+a.id+'')" style="padding:5px 11px;border-radius:6px;background:var(--tg);color:var(--teal);border:1px solid rgba(0,212,172,.25);font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0">Acknowledge\u003c/button>' +
+      '\u003cbutton onclick="acknowledgeAbsence(\''+a.id+'\')" style="padding:5px 11px;border-radius:6px;background:var(--tg);color:var(--teal);border:1px solid rgba(0,212,172,.25);font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0">Acknowledge\u003c/button>' +
     '\u003c/div>';
   }).join('');
 }
@@ -2222,7 +2230,7 @@ function updateKioskSession(){
     const [sh,sm] = s.start.split(':').map(Number);
     const [eh,em] = s.end.split(':').map(Number);
     const start = sh*60+sm, end = eh*60+em;
-    return nowMins >= start && nowMins \u003c= end;
+    return nowMins >= start && nowMins <= end;
   });
   if(!current) current = sessions.find(s=>{
     const [sh,sm] = s.start.split(':').map(Number);
@@ -2240,7 +2248,7 @@ function updateKioskSession(){
 function kioskSearch(q){
   const res = document.getElementById('kiosk-results');
   if(!res) return;
-  if(q.length \u003c 2){ res.innerHTML=''; return; }
+  if(q.length < 2){ res.innerHTML=''; return; }
   const matches = APP.students.filter(s=>s.name.toLowerCase().startsWith(q.toLowerCase()));
   if(!matches.length){
     res.innerHTML='\u003cdiv style="text-align:center;color:var(--muted);font-size:14px;padding:16px">No student found\u003c/div>';
@@ -2248,7 +2256,7 @@ function kioskSearch(q){
   }
   res.innerHTML = matches.map(s => {
     const already = APP.attendance.some(a=>a.studentId===s.id&&a.date===tds()&&a.sessionId===window._kioskSessionId);
-    return '\u003cbutton onclick="kioskMarkAttendance(''+s.id+'')" '+
+    return '\u003cbutton onclick="kioskMarkAttendance(\''+s.id+'\')" '+
       'style="width:100%;padding:14px 16px;border-radius:11px;background:'+(already?'rgba(0,212,172,.1)':'var(--card)')+';border:1px solid '+(already?'rgba(0,212,172,.3)':'var(--border)')+';display:flex;align-items:center;justify-content:space-between;gap:10px;transition:all .13s">' +
       '\u003cdiv style="text-align:left">\u003cdiv style="font-size:16px;font-weight:700;color:var(--fg)">'+s.name+'\u003c/div>' +
       '\u003cdiv style="font-size:12px;color:var(--muted);margin-top:2px">'+s.belt+' Belt · Age '+s.age+'\u003c/div>\u003c/div>' +
