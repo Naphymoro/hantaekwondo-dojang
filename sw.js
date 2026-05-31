@@ -4,7 +4,7 @@
 // Version: bump CACHE_VERSION to force update on all devices
 // ═══════════════════════════════════════════════════════════════
 
-const CACHE_VERSION  = 'han-tkd-v3-logout-momo-parent-layout';
+const CACHE_VERSION  = 'han-tkd-v4-scroll-back-child-search';
 const STATIC_CACHE   = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE  = `${CACHE_VERSION}-dynamic`;
 
