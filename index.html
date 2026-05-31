@@ -613,23 +613,27 @@ body[data-role="parent"]     td:last-child .sh-btn {display:none}
 @media(max-width:640px){.roster-grid,.market-grid,.event-grid,.wallet-grid{grid-template-columns:1fr}.portal-phone{border-radius:18px}.portal-body{padding:12px}.profile-line{font-size:11.5px}}
 
 
-/* Scroll + mobile back + parent child search patch */
-html{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
-body{min-height:100%;overflow-y:auto!important;overscroll-behavior-y:contain}
-.main-wrap{overflow-y:auto!important;min-height:100vh;height:auto}
-.content{overflow-y:auto!important;-webkit-overflow-scrolling:touch;min-height:0;max-height:none}
-.auth-overlay{overflow-y:auto!important;align-items:flex-start!important;-webkit-overflow-scrolling:touch}
-.auth-box{margin:20px 0!important;max-height:none!important}
-.mobile-back-btn{display:none;align-items:center;gap:5px;border:1px solid var(--border);background:var(--surface);color:var(--fg);border-radius:9px;padding:7px 9px;font-size:11.5px;font-weight:800;cursor:pointer;transition:all .15s}
-.mobile-back-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.mobile-back-btn:active{transform:scale(.96)}
-.auth-child-results{display:flex;flex-direction:column;gap:6px;max-height:210px;overflow-y:auto;border:1px solid var(--border);background:var(--ibg);border-radius:10px;padding:7px;margin-bottom:10px;-webkit-overflow-scrolling:touch}
-.auth-child-choice{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:10px;border-radius:9px;background:var(--surface);border:1px solid var(--border);color:var(--fg);font-size:13px;font-weight:700;cursor:pointer}
-.auth-child-choice small{display:block;color:var(--muted);font-size:11px;font-weight:500;margin-top:2px}
-.auth-child-choice.selected{border-color:var(--crimson);background:var(--cg);color:var(--crimson)}
-.auth-child-empty{font-size:12px;color:var(--dim);text-align:center;padding:10px;line-height:1.4}
-@media(max-width:900px){.mobile-back-btn{display:inline-flex}.tb-title{max-width:44vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tb-sub,.tb-sep{display:none}.content{padding-bottom:110px}.main-wrap{padding-bottom:0}.card,.tbl-wrap,.portal-outer.full-page .portal-phone{max-width:100%}}
-@media(max-width:640px){.auth-overlay{padding:8px}.auth-box{border-radius:16px}.topbar{position:sticky;top:0;z-index:250}.content{height:auto;min-height:calc(100vh - 62px);overflow-y:visible!important}.page.active{padding-bottom:90px}}
+/* MOBILE SCROLL + BACK + PARENT SEARCH FIX */
+html, body{height:100%;min-height:100%;overflow-y:auto!important;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;}
+body{overflow-x:hidden!important;display:block!important;}
+.main-wrap{min-height:100dvh;height:auto!important;overflow:visible!important;display:flex;}
+.content{min-height:calc(100dvh - var(--hh));height:auto!important;max-height:none!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
+.page.active{min-height:auto;padding-bottom:96px;}
+.mobile-back-btn{display:none;width:34px;height:34px;background:var(--surface);border:1px solid var(--border);border-radius:8px;align-items:center;justify-content:center;color:var(--muted);flex-shrink:0;}
+.mobile-back-btn svg{width:16px;height:16px;}
+.parent-child-results{display:none;gap:6px;max-height:220px;overflow-y:auto;margin:0 0 10px;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--ibg);-webkit-overflow-scrolling:touch;}
+.parent-child-results.show{display:grid;}
+.parent-child-option{width:100%;padding:10px 11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);text-align:left;color:var(--fg);font-weight:700;}
+.parent-child-option small{display:block;margin-top:3px;color:var(--muted);font-weight:500;}
+.parent-selected-child{display:none;margin:0 0 10px;padding:9px 11px;border-radius:10px;background:rgba(0,212,172,.08);border:1px solid rgba(0,212,172,.2);color:var(--teal);font-size:12px;font-weight:800;}
+.parent-selected-child.show{display:block;}
+@media(max-width:768px){
+  .mobile-back-btn{display:flex;}
+  body{min-height:100dvh;}
+  .main-wrap{width:100%;}
+  .content{padding-bottom:112px!important;}
+  .topbar{position:sticky;top:0;}
+}
 
 </style>
 </head>
@@ -750,7 +754,7 @@ body{min-height:100%;overflow-y:auto!important;overscroll-behavior-y:contain}
 <div class="main-wrap">
   <header class="topbar">
     <button class="hamburger-btn" id="hamburger" onclick="toggleSidebar()"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
-    <button class="mobile-back-btn" id="app-back-btn" onclick="appBack()" title="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/><path d="M9 12h12"/></svg><span>Back</span></button>
+    <button class="mobile-back-btn" id="mobileBackBtn" onclick="appBack()" title="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/><path d="M21 12H9"/></svg></button>
     <span class="tb-title" id="tb-title">DASHBOARD</span>
     <span class="tb-sep">·</span><span class="tb-sub" id="tb-sub">Academy Overview</span>
     <div class="tb-right">
@@ -1070,11 +1074,12 @@ body{min-height:100%;overflow-y:auto!important;overscroll-behavior-y:contain}
     <!-- Parent step — select child + PIN -->
     <div id="auth-parent-step" style="display:none;padding:0 20px 20px">
       <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Find your child</div>
-      <input id="auth-student-search" class="form-input" placeholder="Type first 3 letters of child name" autocomplete="off" oninput="filterParentChildLogin()" style="margin-bottom:8px">
+      <input id="auth-child-search" class="form-input" type="text" autocomplete="off" placeholder="Type first 3 letters of any child name…" style="margin-bottom:8px" oninput="renderParentChildSearch()"/>
+      <div id="auth-child-results" class="parent-child-results"></div>
+      <div id="auth-child-selected" class="parent-selected-child"></div>
       <select id="auth-student-sel" class="form-input" style="display:none;margin-bottom:10px">
         <option value="">Select your child…</option>
       </select>
-      <div id="auth-child-results" class="auth-child-results"><div class="auth-child-empty">Type at least 3 letters, then select your child.</div></div>
       <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Your PIN (last 4 digits of your phone)</div>
       <input id="parent-pin-inp" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"
         class="form-input" placeholder="••••" style="margin-bottom:8px;letter-spacing:6px;font-size:20px;text-align:center"
@@ -2686,119 +2691,6 @@ openScheduleRoster=function(sessId){
   APP.students.forEach(st=>{d.innerHTML=d.innerHTML.replace(`${st.age} yrs · ${st.belt}`, `${st.age} yrs · ${childSessionLine(st)} · ${st.belt}`);});
 };
 
-
-// ════════════════════════════════════════════
-// SCROLL + BACK BUTTON + 3-LETTER CHILD SEARCH PATCH
-// ════════════════════════════════════════════
-function enableVerticalScroll(){
-  document.documentElement.style.overflowY='auto';
-  document.body.style.overflowY='auto';
-  document.body.style.height='auto';
-  const mw=document.querySelector('.main-wrap'), ct=document.querySelector('.content');
-  if(mw){mw.style.overflowY='auto';mw.style.height='auto';}
-  if(ct){ct.style.overflowY='auto';ct.style.webkitOverflowScrolling='touch';}
-}
-enableVerticalScroll();
-window.addEventListener('resize', enableVerticalScroll, {passive:true});
-
-let viewHistory=[];
-let suppressViewHistory=false;
-const __switchViewBackPatch = switchView;
-switchView=function(v){
-  const active=document.querySelector('.page.active');
-  const current=active?active.id.replace('page-',''):null;
-  if(current && current!==v && !suppressViewHistory){
-    viewHistory.push(current);
-    if(viewHistory.length>12) viewHistory.shift();
-  }
-  __switchViewBackPatch(v);
-  updateBackButton();
-  setTimeout(()=>{document.querySelector('.content')?.scrollTo({top:0,behavior:'smooth'});},0);
-};
-function updateBackButton(){
-  const b=document.getElementById('app-back-btn');
-  if(!b)return;
-  b.style.visibility=viewHistory.length?'visible':'hidden';
-}
-function appBack(){
-  const active=document.querySelector('.page.active');
-  const current=active?active.id.replace('page-',''):null;
-  const prev=viewHistory.pop();
-  if(prev && prev!==current){
-    suppressViewHistory=true;
-    __switchViewBackPatch(prev);
-    suppressViewHistory=false;
-    updateBackButton();
-    document.querySelector('.content')?.scrollTo({top:0,behavior:'smooth'});
-  } else if(current && current!=='dashboard' && currentRole!=='parent'){
-    suppressViewHistory=true; __switchViewBackPatch('dashboard'); suppressViewHistory=false; updateBackButton();
-  } else if(current && current!=='parent' && currentRole==='parent'){
-    suppressViewHistory=true; __switchViewBackPatch('parent'); suppressViewHistory=false; updateBackButton();
-  }
-}
-updateBackButton();
-
-function normalizeNameForSearch(v){return String(v||'').trim().toLowerCase();}
-function parentChildSearchMatches(st, q){
-  q=normalizeNameForSearch(q);
-  if(q.length<3)return false;
-  const parts=normalizeNameForSearch(st.name).split(/\s+/).filter(Boolean);
-  return parts.some(part=>part.startsWith(q)) || normalizeNameForSearch(st.name).includes(q);
-}
-function renderParentChildChoices(matches){
-  const box=document.getElementById('auth-child-results');
-  const sel=document.getElementById('auth-student-sel');
-  if(!box)return;
-  const chosen=sel?.value||'';
-  if(!matches.length){box.innerHTML='<div class="auth-child-empty">No child found. Check the spelling or try another part of the name.</div>';return;}
-  box.innerHTML=matches.map(st=>`<button type="button" class="auth-child-choice ${chosen===st.id?'selected':''}" onclick="selectParentChild('${st.id}')"><span>${st.name}<small>Age ${st.age||'—'} · ${childSessionLine?childSessionLine(st):'No session assigned'}</small></span><span>${chosen===st.id?'✓':'Select'}</span></button>`).join('');
-}
-function filterParentChildLogin(){
-  const input=document.getElementById('auth-student-search');
-  const sel=document.getElementById('auth-student-sel');
-  const box=document.getElementById('auth-child-results');
-  if(sel)sel.value='';
-  const q=input?.value||'';
-  if(!box)return;
-  if(q.trim().length<3){box.innerHTML='<div class="auth-child-empty">Type at least 3 letters, then select your child.</div>';return;}
-  renderParentChildChoices(APP.students.filter(st=>parentChildSearchMatches(st,q)).slice(0,12));
-}
-function selectParentChild(id){
-  const st=APP.students.find(x=>x.id===id);
-  const sel=document.getElementById('auth-student-sel');
-  const input=document.getElementById('auth-student-search');
-  if(sel)sel.value=id;
-  if(input && st)input.value=st.name;
-  renderParentChildChoices(st?[st]:[]);
-  setTimeout(()=>document.getElementById('parent-pin-inp')?.focus(),50);
-}
-const __showAuthScreenChildSearchPatch=showAuthScreen;
-showAuthScreen=function(){
-  __showAuthScreenChildSearchPatch();
-  const input=document.getElementById('auth-student-search');
-  const sel=document.getElementById('auth-student-sel');
-  const box=document.getElementById('auth-child-results');
-  if(input)input.value='';
-  if(sel)sel.value='';
-  if(box)box.innerHTML='<div class="auth-child-empty">Type at least 3 letters, then select your child.</div>';
-};
-const __selectAuthRoleChildSearchPatch=selectAuthRole;
-selectAuthRole=function(role){
-  __selectAuthRoleChildSearchPatch(role);
-  if(role==='parent')setTimeout(()=>document.getElementById('auth-student-search')?.focus(),80);
-};
-const __confirmParentLoginChildSearchPatch=confirmParentLogin;
-confirmParentLogin=function(){
-  const sel=document.getElementById('auth-student-sel');
-  const err=document.getElementById('parent-pin-error');
-  if(!sel || !sel.value){
-    if(err)err.textContent='Type at least 3 letters and select your child from the list.';
-    showToast('Select your child first','err');
-    return;
-  }
-  __confirmParentLoginChildSearchPatch();
-};
-
 renderTopLogout();
 
 
@@ -2835,6 +2727,153 @@ setTimeout(requestNotificationPermission, 10000);
     showAuthScreen();
   }
 })();
+
+
+// ════════════════════════════════════════════
+// VERIFIED MOBILE SCROLL + BACK + PARENT CHILD SEARCH PATCH
+// ════════════════════════════════════════════
+(function(){
+  const versionTag = 'scroll-back-child-search-v2';
+  window.HAN_PATCH_SCROLL_BACK_CHILD_SEARCH = versionTag;
+
+  function forceScrollableLayout(){
+    document.documentElement.style.overflowY = 'auto';
+    document.documentElement.style.height = '100%';
+    document.body.style.overflowY = 'auto';
+    document.body.style.overflowX = 'hidden';
+    document.body.style.height = 'auto';
+    document.body.style.minHeight = '100dvh';
+    const mw = document.querySelector('.main-wrap');
+    if(mw){ mw.style.overflow = 'visible'; mw.style.minHeight = '100dvh'; mw.style.height = 'auto'; }
+    const content = document.querySelector('.content');
+    if(content){
+      content.style.overflowY = 'auto';
+      content.style.webkitOverflowScrolling = 'touch';
+      content.style.maxHeight = 'none';
+      content.style.height = 'auto';
+    }
+  }
+  forceScrollableLayout();
+  window.addEventListener('resize', forceScrollableLayout, {passive:true});
+  document.addEventListener('DOMContentLoaded', forceScrollableLayout);
+
+  const originalSwitchView = window.switchView;
+  const viewStack = [];
+  window.switchView = function(v){
+    const active = document.querySelector('.page.active');
+    const current = active ? active.id.replace('page-','') : null;
+    if(current && current !== v && !window.__appBackInProgress){ viewStack.push(current); }
+    const result = originalSwitchView ? originalSwitchView(v) : undefined;
+    forceScrollableLayout();
+    const content = document.querySelector('.content');
+    if(content) content.scrollTop = 0;
+    window.scrollTo({top:0, behavior:'instant'});
+    return result;
+  };
+  document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.onclick = function(ev){ ev.preventDefault(); window.switchView(btn.dataset.view); };
+  });
+  window.appBack = function(){
+    const sidebar = document.getElementById('sidebar');
+    if(sidebar && sidebar.classList.contains('open')){ closeSidebar(); return; }
+    const prev = viewStack.pop();
+    window.__appBackInProgress = true;
+    if(prev){ window.switchView(prev); }
+    else { window.switchView(currentRole === 'parent' ? 'parent' : 'dashboard'); }
+    window.__appBackInProgress = false;
+  };
+
+  function normalizeName(v){ return String(v||'').toLowerCase().trim(); }
+  function studentMeta(st){
+    let bits=[];
+    if(st.age) bits.push('Age '+st.age);
+    if(st.belt) bits.push(st.belt);
+    if(typeof childSessionLine === 'function') bits.push(childSessionLine(st));
+    return bits.filter(Boolean).join(' • ');
+  }
+  window.renderParentChildSearch = function(){
+    const input = document.getElementById('auth-child-search');
+    const results = document.getElementById('auth-child-results');
+    const selected = document.getElementById('auth-child-selected');
+    const sel = document.getElementById('auth-student-sel');
+    if(!input || !results || !sel) return;
+    const q = normalizeName(input.value);
+    sel.value = '';
+    if(selected){ selected.textContent=''; selected.classList.remove('show'); }
+    if(q.length < 3){
+      results.classList.remove('show');
+      results.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px">Type at least 3 letters to search.</div>';
+      return;
+    }
+    const matches = (APP.students||[]).filter(st => normalizeName(st.name).includes(q)).slice(0, 12);
+    results.classList.add('show');
+    results.innerHTML = matches.length ? matches.map(st =>
+      '<button type="button" class="parent-child-option" onclick="selectParentLoginChild(\''+st.id+'\')">'+
+      st.name+'<small>'+studentMeta(st)+'</small></button>'
+    ).join('') : '<div style="font-size:12px;color:var(--muted);padding:4px">No child found. Check spelling or try another 3 letters.</div>';
+  };
+  window.selectParentLoginChild = function(id){
+    const st = (APP.students||[]).find(x => x.id === id);
+    const sel = document.getElementById('auth-student-sel');
+    const input = document.getElementById('auth-child-search');
+    const results = document.getElementById('auth-child-results');
+    const selected = document.getElementById('auth-child-selected');
+    if(!st || !sel) return;
+    if(!Array.from(sel.options).some(o => o.value === id)){
+      sel.insertAdjacentHTML('beforeend','<option value="'+id+'">'+st.name+'</option>');
+    }
+    sel.value = id;
+    if(input) input.value = st.name;
+    if(results){ results.classList.remove('show'); results.innerHTML = ''; }
+    if(selected){ selected.textContent = 'Selected: '+st.name+' • '+studentMeta(st); selected.classList.add('show'); }
+    const pin = document.getElementById('parent-pin-inp');
+    if(pin) pin.focus();
+  };
+
+  const originalShowAuthScreen = window.showAuthScreen;
+  window.showAuthScreen = function(){
+    if(originalShowAuthScreen) originalShowAuthScreen();
+    const sel = document.getElementById('auth-student-sel');
+    if(sel){
+      sel.innerHTML = '<option value="">Select your child…</option>' + (APP.students||[]).map(st => '<option value="'+st.id+'">'+st.name+'</option>').join('');
+      sel.style.display = 'none';
+    }
+    const input = document.getElementById('auth-child-search');
+    const results = document.getElementById('auth-child-results');
+    const selected = document.getElementById('auth-child-selected');
+    const pin = document.getElementById('parent-pin-inp');
+    if(input) input.value = '';
+    if(pin) pin.value = '';
+    if(results){ results.innerHTML = ''; results.classList.remove('show'); }
+    if(selected){ selected.textContent = ''; selected.classList.remove('show'); }
+    forceScrollableLayout();
+  };
+
+  window.confirmParentLogin = function(){
+    const sel = document.getElementById('auth-student-sel');
+    const pinEl = document.getElementById('parent-pin-inp');
+    const errEl = document.getElementById('parent-pin-error');
+    if(!sel || !sel.value){
+      if(errEl) errEl.textContent = 'Type at least 3 letters and select your child first';
+      showToast('Please search and select your child first', 'err');
+      return;
+    }
+    const st = (APP.students||[]).find(x=>x.id===sel.value);
+    if(!st){ showToast('Student not found', 'err'); return; }
+    const entered = pinEl ? pinEl.value.trim() : '';
+    if(entered !== (st.parentPin || '0000')){
+      if(errEl) errEl.textContent = 'Incorrect PIN — use last 4 digits of your registered phone';
+      if(pinEl){ pinEl.value=''; pinEl.focus(); }
+      return;
+    }
+    if(errEl) errEl.textContent = '';
+    parentStudentId = sel.value;
+    hideAuthScreen();
+    applyRole('parent');
+    showToast('Welcome, '+st.name+String.fromCharCode(39)+'s parent');
+  };
+})();
+
 </script>
 </body>
 </html>
